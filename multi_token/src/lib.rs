@@ -1,0 +1,7 @@
+mod core;
+
+
+impl Contract {
+
+
+}
