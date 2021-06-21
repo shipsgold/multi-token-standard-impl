@@ -35,7 +35,7 @@ pub trait MultiTokenCore {
         memo: Option<String>
     );
 
-       /// Transfer token/s and call a method on a receiver contract. A successful
+    /// Transfer token/s and call a method on a receiver contract. A successful
     /// workflow will end in a success execution outcome to the callback on the MultiToken
     /// contract at the method `multi_resolve_transfer`.
     ///
@@ -114,10 +114,6 @@ pub trait MultiTokenCore {
         memo: Option<String>,
         msg: String,       
     );
-    /// Batch token transfer. Transfer a tokens given token_ids and amounts. The token ids can correspond to  
-    /// either Non-Fungible Tokens or Fungible Tokens or some combination of the two. The token ids 
-    /// are used to segment the types on a per contract implementation basis. 
-    /// 
     /// Batch transfer token/s and call a method on a receiver contract. A successful
     /// workflow will end in a success execution outcome to the callback on the MultiToken
     /// contract at the method `multi_resolve_batch_transfer`.
@@ -162,5 +158,20 @@ pub trait MultiTokenCore {
         memo: Option<String>,
         msg: String,
     ) -> PromiseOrValue<bool>;
+
+    /// Get the balance of an an account given token_id. For fungible token returns back amount, for 
+    /// non fungible token it returns back constant 1.
+    fn balance_of(owner_id: ValidAccountId, token_id: TokenId)-> u128
+
+    /// Get the balances of an an account given token_ids. For fungible token returns back amount, for 
+    /// non fungible token it returns back constant 1. returns vector of balances corresponding to token_ids 
+    /// in a 1-1 mapping
+    fn balance_of_batch(owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>
+
+    /// Returns the total supply of the token in a decimal string representation given token_id.
+    fn total_supply(token_id: TokenId)->u128
+
+    /// Returns the total supplies of the tokens given by token_ids in a decimal string representation.
+    fn total_supply_batch(token_ids: Vec<TokenId>) -> Vec<u128>
 }
 
