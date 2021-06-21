@@ -27,14 +27,14 @@ pub trait MultiTokenResolver {
     /// * `token_ids`: the `token_ids` argument given to `multi_transfer_call`
     /// * `approvals`: if using Approval Management, contract MUST provide
     ///   set of original approved accounts in this argument, and restore these
-    ///   approved accounts in case of revert.
+    ///   approved accounts in case of revert. In this case it may be multiple sets of approvals
     ///
     /// Returns true if tokens were successfully transferred to `receiver_id`.
-    fn nft_resolve_transfer(
+    fn multi_resolve_transfer(
         &mut self,
         previous_owner_id: AccountId,
         receiver_id: AccountId,
         token_ids: Vec<TokenId>,
-        approvals: Option<HashMap<AccountId, u64>>,
+        approvals: Option<Vec<HashMap<AccountId, u64>>>,
     ) -> bool;
 }
