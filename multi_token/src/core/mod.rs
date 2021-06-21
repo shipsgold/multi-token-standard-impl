@@ -110,7 +110,7 @@ pub trait MultiTokenCore {
         receiver_id: ValidAccountId,
         token_id: Vec<TokenId>,
         amounts: Vec<u128>,
-        approval_id: Option<u64>,
+        approval_id: Option<Vec<u64>>,
         memo: Option<String>,
         msg: String,       
     );
@@ -154,7 +154,7 @@ pub trait MultiTokenCore {
         receiver_id: ValidAccountId,
         token_ids: Vec<TokenId>,
         amounts: Vec<u128>,
-        approval_id: Option<u64>,
+        approval_id: Option<Vec<u64>>,
         memo: Option<String>,
         msg: String,
     ) -> PromiseOrValue<bool>;
