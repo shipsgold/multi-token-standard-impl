@@ -5,7 +5,7 @@ use crate::multi_token::token::{Token, TokenId};
 use crate::multi_token::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, TreeMap, UnorderedSet};
-use near_sdk::json_types::{Base64VecU8, ValidAccountId};
+use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
 use near_sdk::{
 	assert_one_yocto, env, ext_contract, log, AccountId, Balance, BorshStorageKey, CryptoHash,
 	Gas, IntoStorageKey, PromiseOrValue, PromiseResult, StorageUsage,
@@ -40,6 +40,7 @@ pub trait MultiReceiver {
 	) -> PromiseOrValue<bool>;
 }
 
+
 /// Implementation of multi-token standard.
 /// There are next traits that any contract may implement:
 ///     - MultiTokenCore -- interface with multi_transfer/balance/supply methods. MultiToken provides methods for it.
@@ -53,11 +54,22 @@ pub struct MultiToken {
 	pub owner_id: AccountId,
 
 	// The storage size in bytes for each new token
-	pub extra_storage_in_bytes_per_token: StorageUsage,
+	pub extra_storage_in_bytes_per_nft_token: StorageUsage,
+	pub extra_storage_in_bytes_per_ft_token_balance: StorageUsage,
+	pub extra_storage_in_bytes_per_ft_token_creation: StorageUsage,
 
-	// always required
-	pub owner_by_id: TreeMap<TokenId, AccountId>,
+	// always required TokenId corresponds to nft
+	pub nft_owner_by_id: TreeMap<TokenId, AccountId>,
 
+	// always required TokenId corresponds to ft
+	pub ft_owners_by_id: TreeMap<TokenId, TreeMap<AccountId, Balance>>  
+
+	pub owner_prefix: Vec<u8>;
+	pub ft_prefix_index: u64;
+	
+
+	// always required mapping to token supply
+	pub ft_token_supply_by_id: LookupMap<TokenId, u128>
 
 	// required by metadata extension
 	pub token_metadata_by_id: Option<LookupMap<TokenId, TokenMetadata>>,
@@ -68,16 +80,18 @@ pub struct MultiToken {
 }
 
 impl MultiToken {
-	pub fn new<Q, R, S, T>(
+	pub fn new<Q, R, S, T, U>(
 		owner_by_id_prefix: Q,
 		owner_id: ValidAccountId,
 		token_metadata_prefix: Option<R>,
 		approval_prefix: Option<T>,
+		supply_by_id_prefix: U
 	) -> Self
 	where
 		Q: IntoStorageKey,
 		R: IntoStorageKey,
 		T: IntoStorageKey,
+		U: IntoStorageKey
 	{
 		let (approvals_by_id, next_approval_id_by_id) =
 			if let Some(prefix) = approval_prefix {
@@ -90,10 +104,16 @@ impl MultiToken {
 				(None, None)
 			};
 
+		let owner_prefix: Vec<u8> = owner_by_id_prefix.into_storage_key();
+		let ft_owners_by_id = TreeMap::new(owner_prefix.clone());
+		let nft_owner_by_id = TreeMap::new([owner_prefix, "n".into()].concat());
+		
 		let mut this = Self {
 			owner_id: owner_id.into(),
+			owner_prefix: owner_prefix,
 			extra_storage_in_bytes_per_token: 0,
 			owner_by_id: TreeMap::new(owner_by_id_prefix),
+			token_supply_by_id: LookupMap::new(supply_by_id_prefix),	
 			token_metadata_by_id: token_metadata_prefix.map(LookupMap::new),
 			approvals_by_id,
 			next_approval_id_by_id,
@@ -102,12 +122,47 @@ impl MultiToken {
 		this
 	}
 
-	fn measure_min_token_storage_cost(&mut self) {
+
+
+	// returns the current storage key prefix for a ft 
+	fn get_balances_prefix(&mut self) -> Vec<u8> { 
+		owner_prefix.concat(self.ft_prefix_index.to_be_bytes().to_vec())
+	} 
+
+	// increases the internal index for storage keys for balance maps for tokens
+	fn inc_balances_prefix(&mut self) { 
+		self.ft_prefix_index++;
+	}
+
+	fn measure_min_ft_token_storage_cost(&mut self) { 
 		let initial_storage_usage = env::storage_usage();
+
+		// 1. add data to calculate space usage 
+		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> = TreeMap::new(self.get_balances_prefix());
+		self.extra_storage_in_bytes_per_ft_token_creation = initial_storage_usage - env::storage_usage();
+		let storage_after_token_creation =  env::storage_usage();
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
 		let tmp_owner_id = "a".repeat(64);
+		self.ft_token_supply_by_id.insert(&tmp_token_id, 9999);
+		tmp_balance_lookup.insert(&tmp_owner_id,9999);
+		self.ft_owner_by_id.insert(&tmp_token_id, &tmp_balance_lookup);
+
+		// 2. measure the space taken up 
+		self.extra_storage_in_bytes_per_ft_token =
+			env::storage_usage() - storage_after_token_creation;
+
+		// 3. roll it all back
+		self.ft_owners_by_id.remove(&tmp_token_id);
+	}
+
+	fn measure_min_token_storage_cost(&mut self) {
+		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> = TreeMap::new(self.get_balances_prefix())
 		// 1. set some dummy data
-		self.owner_by_id.insert(&tmp_token_id, &tmp_owner_id);
+		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
+		let tmp_owner_id = "a".repeat(64);
+
+		tmp_balance_lookup.insert(&tmp_owner_id,9999);
+		self.nft_owner_by_id.insert(&tmp_token_id, &tmp_owner_id);
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
 			token_metadata_by_id.insert(
 				&tmp_token_id,
@@ -140,7 +195,7 @@ impl MultiToken {
 		}
 
 		// 2. see how much space it took
-		self.extra_storage_in_bytes_per_token =
+		self.extra_storage_in_bytes_per_nft_token =
 			env::storage_usage() - initial_storage_usage;
 		// 3. roll it all back
 		if let Some(next_approval_id_by_id) = &mut self.next_approval_id_by_id {
@@ -152,7 +207,7 @@ impl MultiToken {
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
 			token_metadata_by_id.remove(&tmp_token_id);
 		}
-		self.owner_by_id.remove(&tmp_token_id);
+		self.nft_owner_by_id.remove(&tmp_token_id);
 	}
 
 
@@ -281,11 +336,12 @@ impl MultiTokenCore for MultiToken {
 
 	fn multi_token(self, token_id: TokenId) -> Option<Token> {
 		let owner_id = self.owner_by_id.get(&token_id)?;
+		let supply = self.token_supply_by_id.get(&token_id)?;
 		let metadata = self.token_metadata_by_id.and_then(|by_id| by_id.get(&token_id));
 		let approved_account_ids = self
 		    .approvals_by_id
 		    .and_then(|by_id| by_id.get(&token_id).or_else(|| Some(HashMap::new())));
-		Some(Token { token_id, owner_id, metadata, approved_account_ids })
+		Some(Token { token_id, owner_id, supply, metadata, approved_account_ids })
 	    }
 
 
