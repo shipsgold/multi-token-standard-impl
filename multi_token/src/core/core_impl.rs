@@ -17,6 +17,11 @@ const GAS_FOR_FT_TRANSFER_CALL: Gas = 25_000_000_000_000 + GAS_FOR_RESOLVE_TRANS
 
 const NO_DEPOSIT: Balance = 0;
 
+enum TokenType {
+	FT,
+	NFT
+}
+
 #[ext_contract(ext_self)]
 trait MultiResolver {
 	fn multi_resolve_transfer(
@@ -57,6 +62,8 @@ pub struct MultiToken {
 	pub extra_storage_in_bytes_per_nft_token: StorageUsage,
 	pub extra_storage_in_bytes_per_ft_token_balance: StorageUsage,
 	pub extra_storage_in_bytes_per_ft_token_creation: StorageUsage,
+
+	pub token_type_index: LookupMap<TokenId, TokenType>
 
 	// always required TokenId corresponds to nft
 	pub nft_owner_by_id: TreeMap<TokenId, AccountId>,
@@ -118,7 +125,8 @@ impl MultiToken {
 			approvals_by_id,
 			next_approval_id_by_id,
 		};
-		this.measure_min_token_storage_cost();
+		this.measure_min_ft_token_storage_cost();
+		this.measure_min_nft_token_storage_cost();
 		this
 	}
 
