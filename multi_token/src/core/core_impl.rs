@@ -234,12 +234,11 @@ impl MultiToken {
         to: &AccountId,
     ) {
         // update owner
-	let token_type = self.token_type_index.get(&token_id);
-	 match token_type{
-		Some(TokenType::FT) => self.ft_owners_by_id.get(&token_id).unwrap().insert(to, amount), 
-		Some(TokenType::NFT) =>self.nft_owner_by_id.insert(token_id, to),
-		_ => () 
-	}
+	 match self.token_type_index.get(token_id) {
+		Some(TokenType::NFT) => { self.nft_owner_by_id.insert(token_id,to); },
+		Some(TokenType::FT) => { self.ft_owners_by_id.get(token_id).unwrap().insert(to, &amount);},
+		_ => (),
+	};
     }
 
     /// Transfer from current owner to receiver_id, checking that sender is allowed to transfer.
