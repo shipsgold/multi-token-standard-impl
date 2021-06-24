@@ -155,12 +155,13 @@ impl MultiToken {
 		let storage_after_token_creation =  env::storage_usage();
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
 		let tmp_owner_id = "a".repeat(64);
-		self.ft_token_supply_by_id.insert(&tmp_token_id, 9999);
-		tmp_balance_lookup.insert(&tmp_owner_id,9999);
-		self.ft_owner_by_id.insert(&tmp_token_id, &tmp_balance_lookup);
+		let tmp_supply:u128 = 9999;
+		self.ft_token_supply_by_id.insert(&tmp_token_id, &tmp_supply);
+		tmp_balance_lookup.insert(&tmp_owner_id, &tmp_supply);
+		self.ft_owners_by_id.insert(&tmp_token_id, &tmp_balance_lookup);
 
 		// 2. measure the space taken up 
-		self.extra_storage_in_bytes_per_ft_token =
+		self.extra_storage_in_bytes_per_ft_token_balance =
 			env::storage_usage() - storage_after_token_creation;
 
 		// 3. roll it all back
