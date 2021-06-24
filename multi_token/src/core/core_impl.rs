@@ -359,7 +359,6 @@ impl MultiTokenCore for MultiToken {
 		    .and_then(|by_id| by_id.get(&token_id).or_else(|| Some(HashMap::new())));
 		Some(Token { token_id, token_type, owner_id, supply, metadata, approved_account_ids })
 	    }
-
-
+	
 
 }

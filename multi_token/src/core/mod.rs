@@ -1,5 +1,5 @@
+mod core_impl;
 use near_sdk::json_types::{Base64VecU8, ValidAccountId};
-use near_sdk::
 use crate::multi_token::metadata::TokenMetadata;
 use crate::multi_token::token::{Token, TokenId};
 
