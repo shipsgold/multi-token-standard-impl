@@ -7,6 +7,7 @@ use std::collections::HashMap;
 pub type TokenId = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(crate = "near_sdk::serde")]
 pub enum TokenType {
 	FT,
 	NFT

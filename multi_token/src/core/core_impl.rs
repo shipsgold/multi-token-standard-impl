@@ -1,8 +1,8 @@
 use super::resolver::MultiTokenResolver;
 use crate::core::MultiTokenCore;
 use crate::metadata::TokenMetadata;
-use crate::multi_token::token::{Token, TokenId, TokenType};
-use crate::multi_token::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
+use crate::token::{Token, TokenId, TokenType};
+//use crate::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, TreeMap, UnorderedSet};
 use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
@@ -137,7 +137,7 @@ impl MultiToken {
 
 	// increases the internal index for storage keys for balance maps for tokens
 	fn inc_balances_prefix(&mut self) { 
-		self.ft_prefix_index++;
+		self.ft_prefix_index+=1;
 	}
 
 	fn measure_min_ft_token_storage_cost(&mut self) { 
@@ -162,7 +162,7 @@ impl MultiToken {
 	}
 
 	fn measure_min_nft_token_storage_cost(&mut self) {
-		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> = TreeMap::new(self.get_balances_prefix())
+		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> = TreeMap::new(self.get_balances_prefix());
 		// 1. set some dummy data
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
 		let tmp_owner_id = "a".repeat(64);
@@ -228,8 +228,8 @@ impl MultiToken {
         to: &AccountId,
     ) {
         // update owner
-	let token_type = self.token_type_index.get(&token_id)
-	token_type match {
+	let token_type = self.token_type_index.get(&token_id);
+	 match token_type{
 		Some(TokenType::FT) => self.ft_owners_by_id.get(&token_id).unwrap().insert(to, amount), 
 		Some(TokenType::NFT) =>self.nft_owner_by_id.insert(token_id, to),
 		_ => () 
@@ -248,7 +248,7 @@ impl MultiToken {
         approval_id: Option<u64>,
         memo: Option<String>,
     ) -> (AccountId, Option<HashMap<AccountId, u64>>) {
-	let token_type = self.token_type_index.get(token_id).expect("Token not found")
+	let token_type = self.token_type_index.get(token_id).expect("Token not found");
         // clear approvals, if using Approval Management extension
         // this will be rolled back by a panic if sending fails
         let approved_account_ids =
@@ -258,7 +258,7 @@ impl MultiToken {
         if sender_id != &owner_id {
 	    // if the token transferred is a fungible type and you are not the owner then cannot perform
 	    // transfer
-	    if(token_type === TokenType::FT) {
+	    if(token_type == TokenType::FT) {
                 env::panic(b"Unauthorized")
 	    }
             // if approval extension is NOT being used, or if token has no approved accounts
@@ -312,7 +312,7 @@ impl MultiTokenCore for MultiToken {
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
 		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount, approval_id, memo);
-	};
+	}
 
 	fn multi_transfer_call(&mut self,
 		receiver_id: ValidAccountId,
