@@ -169,12 +169,11 @@ impl MultiToken {
 	}
 
 	fn measure_min_nft_token_storage_cost(&mut self) {
-		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> = TreeMap::new(self.get_balances_prefix());
+		let initial_storage_usage = env::storage_usage();
 		// 1. set some dummy data
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
 		let tmp_owner_id = "a".repeat(64);
 
-		tmp_balance_lookup.insert(&tmp_owner_id,9999);
 		self.nft_owner_by_id.insert(&tmp_token_id, &tmp_owner_id);
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
 			token_metadata_by_id.insert(
