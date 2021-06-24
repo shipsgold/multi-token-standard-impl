@@ -1,7 +1,7 @@
 use super::resolver::MultiTokenResolver;
 use crate::multi_token::core::MultiTokenCore;
 use crate::multi_token::metadata::TokenMetadata;
-use crate::multi_token::token::{Token, TokenId};
+use crate::multi_token::token::{Token, TokenId, TokenType};
 use crate::multi_token::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, TreeMap, UnorderedSet};
@@ -17,10 +17,7 @@ const GAS_FOR_FT_TRANSFER_CALL: Gas = 25_000_000_000_000 + GAS_FOR_RESOLVE_TRANS
 
 const NO_DEPOSIT: Balance = 0;
 
-enum TokenType {
-	FT,
-	NFT
-}
+
 
 #[ext_contract(ext_self)]
 trait MultiResolver {
@@ -355,11 +352,12 @@ impl MultiTokenCore for MultiToken {
 	fn multi_token(self, token_id: TokenId) -> Option<Token> {
 		let owner_id = self.owner_by_id.get(&token_id)?;
 		let supply = self.token_supply_by_id.get(&token_id)?;
+		let token_type = self.token_type_index.get(&token_id);
 		let metadata = self.token_metadata_by_id.and_then(|by_id| by_id.get(&token_id));
 		let approved_account_ids = self
 		    .approvals_by_id
 		    .and_then(|by_id| by_id.get(&token_id).or_else(|| Some(HashMap::new())));
-		Some(Token { token_id, owner_id, supply, metadata, approved_account_ids })
+		Some(Token { token_id, token_type, owner_id, supply, metadata, approved_account_ids })
 	    }
 
 
