@@ -231,7 +231,12 @@ impl MultiToken {
         to: &AccountId,
     ) {
         // update owner
-        self.owner_by_id.insert(token_id, to);
+	let token_type = self.token_type_index.get(&token_id)
+	token_type match {
+		Some(TokenType::FT) => self.ft_owners_by_id.get(&token_id).unwrap().insert(to, amount), 
+		Some(TokenType::NFT) =>self.nft_owner_by_id.insert(token_id, to),
+		_ => () 
+	}
     }
 
     /// Transfer from current owner to receiver_id, checking that sender is allowed to transfer.
@@ -246,8 +251,7 @@ impl MultiToken {
         approval_id: Option<u64>,
         memo: Option<String>,
     ) -> (AccountId, Option<HashMap<AccountId, u64>>) {
-        let owner_id = self.owner_by_id.get(token_id).expect("Token not found");
-
+	let token_type = self.token_type_index.get(token_id).expect("Token not found")
         // clear approvals, if using Approval Management extension
         // this will be rolled back by a panic if sending fails
         let approved_account_ids =
