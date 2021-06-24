@@ -10,7 +10,7 @@ mod token;
 pub use self::token::{Token, TokenId, TokenType};
 
 /// NFT utility functions
-mod utils;
-pub use utils::*;
+//mod utils;
+//pub use utils::*;
 
 pub use self::core::MultiToken;
