@@ -1,4 +1,4 @@
-use crate::non_fungible_token::metadata::TokenMetadata;
+use crate::metadata::TokenMetadata;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::AccountId;
 use std::collections::HashMap;
@@ -6,6 +6,7 @@ use std::collections::HashMap;
 /// Note that token IDs for NFTs are strings on NEAR. It's still fine to use autoincrementing numbers as unique IDs if desired, but they should be stringified. This is to make IDs more future-proof as chain-agnostic conventions and standards arise, and allows for more flexibility with considerations like bridging NFTs across chains, etc.
 pub type TokenId = String;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TokenType {
 	FT,
 	NFT
@@ -19,6 +20,6 @@ pub struct Token {
     pub token_type: TokenType, 
     pub owner_id: AccountId,
     pub supply: u128,
-    pub metadata: Option<TokenMetadata>
+    pub metadata: Option<TokenMetadata>,
     pub approved_account_ids: Option<HashMap<AccountId, u64>>,
 }

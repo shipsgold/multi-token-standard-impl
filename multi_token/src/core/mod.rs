@@ -1,7 +1,15 @@
 mod core_impl;
+mod receiver;
+mod resolver;
+
+pub use self::core_impl::*;
+
+pub use self::receiver::*;
+pub use self::resolver::*;
+
 use near_sdk::json_types::{Base64VecU8, ValidAccountId};
-use crate::multi_token::metadata::TokenMetadata;
-use crate::multi_token::token::{Token, TokenId};
+use crate::metadata::TokenMetadata;
+use crate::token::{Token, TokenId};
 
 pub trait MultiTokenCore {
     /// Basic token transfer. Transfer a token or tokens given a token_id. The token id can correspond to  

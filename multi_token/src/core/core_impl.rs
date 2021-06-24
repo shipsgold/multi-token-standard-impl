@@ -1,6 +1,6 @@
 use super::resolver::MultiTokenResolver;
-use crate::multi_token::core::MultiTokenCore;
-use crate::multi_token::metadata::TokenMetadata;
+use crate::core::MultiTokenCore;
+use crate::metadata::TokenMetadata;
 use crate::multi_token::token::{Token, TokenId, TokenType};
 use crate::multi_token::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -67,14 +67,14 @@ pub struct MultiToken {
 	pub nft_owner_by_id: TreeMap<TokenId, AccountId>,
 
 	// always required TokenId corresponds to ft
-	pub ft_owners_by_id: TreeMap<TokenId, TreeMap<AccountId, Balance>>  
+	pub ft_owners_by_id: TreeMap<TokenId, TreeMap<AccountId, Balance>> , 
 
-	pub owner_prefix: Vec<u8>;
-	pub ft_prefix_index: u64;
+	pub owner_prefix: Vec<u8>,
+	pub ft_prefix_index: u64,
 	
 
 	// always required mapping to token supply
-	pub ft_token_supply_by_id: LookupMap<TokenId, u128>
+	pub ft_token_supply_by_id: LookupMap<TokenId, u128>,
 
 	// required by metadata extension
 	pub token_metadata_by_id: Option<LookupMap<TokenId, TokenMetadata>>,

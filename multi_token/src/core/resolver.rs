@@ -1,4 +1,4 @@
-use crate::multi_token::token::TokenId;
+use crate::token::TokenId;
 use near_sdk::AccountId;
 use std::collections::HashMap;
 

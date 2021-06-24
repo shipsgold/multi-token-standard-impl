@@ -25,7 +25,7 @@ pub struct TokenMetadata {
 
 /// Offers details on the contract-level metadata.
 pub trait MultiTokenMetadataProvider {
-    fn multi_metadata(&self) -> NFTContractMetadata;
+    fn multi_metadata(&self) -> MultiContractMetadata;
 }
 
 impl MultiContractMetadata {

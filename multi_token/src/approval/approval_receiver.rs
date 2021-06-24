@@ -1,4 +1,4 @@
-use crate::multi_token::token::TokenId;
+use crate::token::TokenId;
 use near_sdk::AccountId;
 
 /// Approval receiver is the trait for the method called (or attempted to be called) when a MultiToken contract adds an approval for an account.
