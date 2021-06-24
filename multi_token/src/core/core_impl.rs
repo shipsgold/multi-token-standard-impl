@@ -61,7 +61,7 @@ pub struct MultiToken {
 	pub extra_storage_in_bytes_per_ft_token_creation: StorageUsage,
 
 	// index token id and token type to aid in uniqueness guarantees
-	pub token_type_index: LookupMap<TokenId, TokenType>
+	pub token_type_index: LookupMap<TokenId, TokenType>,
 
 	// always required TokenId corresponds to nft
 	pub nft_owner_by_id: TreeMap<TokenId, AccountId>,
