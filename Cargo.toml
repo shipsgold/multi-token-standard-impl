@@ -10,7 +10,7 @@ near-sdk-sim = "3.2.0"
  
 
 # remember to include a line for each contract
-multi-token = { path = "./multi_token" }
+multi_token = { path = "./multi_token" }
 
 [profile.release]
 codegen-units = 1
@@ -24,5 +24,5 @@ overflow-checks = true
 [workspace]
 # remember to include a member for each contract
 members = [
-  "multi-token",
+  "multi_token",
 ]
