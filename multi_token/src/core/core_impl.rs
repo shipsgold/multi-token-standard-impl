@@ -63,6 +63,7 @@ pub struct MultiToken {
 	pub extra_storage_in_bytes_per_ft_token_balance: StorageUsage,
 	pub extra_storage_in_bytes_per_ft_token_creation: StorageUsage,
 
+	// index token id and token type to aid in uniqueness guarantees
 	pub token_type_index: LookupMap<TokenId, TokenType>
 
 	// always required TokenId corresponds to nft
@@ -163,7 +164,7 @@ impl MultiToken {
 		self.ft_owners_by_id.remove(&tmp_token_id);
 	}
 
-	fn measure_min_token_storage_cost(&mut self) {
+	fn measure_min_nft_token_storage_cost(&mut self) {
 		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> = TreeMap::new(self.get_balances_prefix())
 		// 1. set some dummy data
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
