@@ -110,15 +110,19 @@ impl MultiToken {
 			};
 
 		let owner_prefix: Vec<u8> = owner_by_id_prefix.into_storage_key();
-		let ft_owners_by_id = TreeMap::new(owner_prefix.clone());
-		let nft_owner_by_id = TreeMap::new([owner_prefix, "n".into()].concat());
+		let token_type_prefix = [owner_prefix, "t".into()].concat();
 		
 		let mut this = Self {
 			owner_id: owner_id.into(),
-			owner_prefix: owner_prefix,
-			extra_storage_in_bytes_per_token: 0,
-			owner_by_id: TreeMap::new(owner_by_id_prefix),
-			token_supply_by_id: LookupMap::new(supply_by_id_prefix),	
+			owner_prefix,
+			extra_storage_in_bytes_per_nft_token: 0,
+			extra_storage_in_bytes_per_ft_token_balance: 0,
+			extra_storage_in_bytes_per_ft_token_creation: 0,
+			ft_owners_by_id: TreeMap::new(owner_prefix.clone()),
+			nft_owner_by_id: TreeMap::new([owner_prefix, "n".into()].concat()),
+			token_type_index: LookupMap::new(token_type_prefix.into_storage_key()),
+			ft_prefix_index: 0,
+			ft_token_supply_by_id: LookupMap::new(supply_by_id_prefix.into_storage_key()),
 			token_metadata_by_id: token_metadata_prefix.map(LookupMap::new),
 			approvals_by_id,
 			next_approval_id_by_id,
@@ -131,8 +135,10 @@ impl MultiToken {
 
 
 	// returns the current storage key prefix for a ft 
-	fn get_balances_prefix(&mut self) -> Vec<u8> { 
-		owner_prefix.concat(self.ft_prefix_index.to_be_bytes().to_vec())
+	fn get_balances_prefix(&self) -> Vec<u8> {
+		let mut ft_token_prefix = self.owner_prefix;
+		ft_token_prefix.extend(&self.ft_prefix_index.to_be_bytes().to_vec());
+		ft_token_prefix
 	} 
 
 	// increases the internal index for storage keys for balance maps for tokens
