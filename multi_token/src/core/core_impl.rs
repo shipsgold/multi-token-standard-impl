@@ -259,6 +259,11 @@ impl MultiToken {
 
         // check if authorized
         if sender_id != &owner_id {
+	    // if the token transferred is a fungible type and you are not the owner then cannot perform
+	    // transfer
+	    if(token_type === TokenType::FT) {
+                env::panic(b"Unauthorized")
+	    }
             // if approval extension is NOT being used, or if token has no approved accounts
             if approved_account_ids.is_none() {
                 env::panic(b"Unauthorized")
