@@ -1,4 +1,4 @@
-use crate::multi_token::token::TokenId;
+use crate::token::TokenId;
 use near_sdk::{AccountId, PromiseOrValue};
 /// Used when MultiTokens are transferred using `multi_transfer_call`. This trait is implemented on the receiving contract, not on the MultiToken contract.
 pub trait MultiTokenReceiver {
@@ -22,7 +22,8 @@ pub trait MultiTokenReceiver {
         &mut self,
         sender_id: AccountId,
         previous_owner_id: AccountId,
-        token_id: Vec<TokenId>,
+        token_ids: Vec<TokenId>,
+        amounts: Vec<u128>,
         msg: String,
     ) -> PromiseOrValue<bool>;
 
