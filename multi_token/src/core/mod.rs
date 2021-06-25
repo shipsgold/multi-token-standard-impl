@@ -10,6 +10,7 @@ pub use self::resolver::*;
 use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
 use crate::metadata::TokenMetadata;
 use near_contract_standards::non_fungible_token;
+use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata};
 use crate::token::{Token, TokenId};
 
 pub trait MultiTokenCore {
@@ -169,6 +170,9 @@ pub trait MultiTokenCore {
     ) -> PromiseOrValue<bool>;
 
     fn nft_token(&self, token_id: TokenId)-> Option<non_fungible_token::Token>;
+
+    /// Get the metadata for your token if it has it this can just return none if it's never in use
+    fn ft_metadata(&self, token_id: TokenId) -> Option<FungibleTokenMetadata>;
 
     /// Get the balance of an an account given token_id. For fungible token returns back amount, for 
     /// non fungible token it returns back constant 1.

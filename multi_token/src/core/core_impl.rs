@@ -7,7 +7,10 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, TreeMap, UnorderedSet};
 use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
 use near_contract_standards::fungible_token::core_impl::{FungibleToken};
-use near_contract_standards::non_fungible_token::core::{NonFungibleToken};
+use near_contract_standards::non_fungible_token::core::{NonFungibleToken, NonFungibleTokenCore};
+use near_contract_standards::fungible_token::core::{FungibleTokenCore};
+use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata};
+use near_contract_standards::non_fungible_token;
 use near_sdk::{
 	assert_one_yocto, env, ext_contract, log, AccountId, Balance, BorshStorageKey, CryptoHash,
 	Gas, IntoStorageKey, PromiseOrValue, PromiseResult, StorageUsage,
@@ -73,6 +76,9 @@ pub struct MultiToken {
 
 	pub ft_prefix: Vec<u8>,
 	pub ft_prefix_index: u64,
+
+	pub ft_metadata: LookupMap<TokenId, FungibleTokenMetadata>,
+
 }
 
 impl MultiToken {
@@ -101,6 +107,7 @@ impl MultiToken {
 			nft_enumeration_prefix,
 			nft_approval_prefix);
 		   let ft_tokens = TreeMap::new(ft_prefix); 
+		   let ft_metadata = LookupMap::new([ft_prefix.into_storage_key(), "m".into()].concat());
 		   let token_type_index = LookupMap::new(token_type_prefix); 
 		   Self {
 			   owner_id: owner_id.into(),
@@ -108,6 +115,7 @@ impl MultiToken {
 			   ft_tokens,
 			   ft_prefix: ft_prefix.into_storage_key(),
 			   ft_prefix_index:0,
+			   ft_metadata,
 			   token_type_index,
 			}
 	}
@@ -128,7 +136,7 @@ impl MultiToken {
         sender_id: &AccountId,
         receiver_id: &AccountId,
         token_id: &TokenId,
-	amount: u128,
+	amount: Balance,
         memo: Option<String>,
         approval_id: Option<u64>,
     ) -> (AccountId, Option<HashMap<AccountId, u64>>) {
@@ -153,20 +161,20 @@ impl MultiTokenCore for MultiToken {
 	fn multi_transfer(&mut self,
 		receiver_id: ValidAccountId,
 		token_id: TokenId, 
-		amount: u128, 
+		amount: U128, 
 		approval_id: Option<u64>, 
 		memo: Option<String>) {
 
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id,amount,memo, approval_id);
+		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), memo, approval_id);
 	}
 
 	// TODO verify gas cost
 	fn multi_transfer_call(&mut self,
 		receiver_id: ValidAccountId,
 		token_id: TokenId,
-		amount: u128,
+		amount: U128,
 		approval_id: Option<u64>,
 		memo: Option<String>,
 		msg: String,
@@ -174,13 +182,13 @@ impl MultiTokenCore for MultiToken {
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
 		let (old_owner, old_approvals) =
-		    self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount, memo, approval_id);
+		    self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), memo, approval_id);
 		// Initiating receiver's call and the callback
 		ext_receiver::multi_on_transfer(
 		    sender_id.clone(),
 		    old_owner.clone(),
 		    vec![token_id.clone()],
-		    vec![amount],
+		    vec![amount.into()],
 		    msg,
 		    receiver_id.as_ref(),
 		    NO_DEPOSIT,
@@ -190,7 +198,7 @@ impl MultiTokenCore for MultiToken {
 		    old_owner,
 		    receiver_id.into(),
 		    vec![token_id],
-		    vec![amount],
+		    vec![amount.into()],
 		    old_approvals,
 		    &env::current_account_id(),
 		    NO_DEPOSIT,
@@ -199,16 +207,22 @@ impl MultiTokenCore for MultiToken {
 		.into()
 	}
 
-	fn multi_token(self, token_id: TokenId) -> Option<Token> {
-		let owner_id = self.owner_by_id.get(&token_id)?;
-		let supply = self.token_supply_by_id.get(&token_id)?;
-		let token_type = self.token_type_index.get(&token_id);
-		let metadata = self.token_metadata_by_id.and_then(|by_id| by_id.get(&token_id));
-		let approved_account_ids = self
-		    .approvals_by_id
-		    .and_then(|by_id| by_id.get(&token_id).or_else(|| Some(HashMap::new())));
-		Some(Token { token_id, token_type, owner_id, supply, metadata, approved_account_ids })
-	    }
-	
+	fn nft_token(&self, token_id: TokenId) -> Option<non_fungible_token::Token> {
+		self.nft_tokens.nft_token(token_id)
+	}
+
+	fn ft_balance_of(&self, owner_id: ValidAccountId, token_id: TokenId) -> U128{
+		let ft_token = self.ft_tokens.get(&token_id).expect("balance: token id not found");
+		ft_token.ft_balance_of(owner_id)
+	}
+
+	fn ft_total_supply(&self, token_id: TokenId) -> U128{
+		let tokens = self.ft_tokens.get(&token_id).expect("supply: token id not found");
+		tokens.ft_total_supply()
+	}
+
+	fn ft_metadata(&self, token_id: TokenId) -> Option<FungibleTokenMetadata> {
+		self.ft_metadata.get(&token_id)
+	}
 
 }
