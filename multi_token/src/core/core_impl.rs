@@ -241,6 +241,44 @@ impl MultiToken {
 	};
     }
 
+    fn verify_nft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, approval_id: Option<u64>){
+	let owner_id = self.nft_owner_by_id.get(token_id).unwrap();
+        // clear approvals, if using Approval Management extension
+        // this will be rolled back by a panic if sending fails
+        let approved_account_ids = self.approvals_by_id.as_mut().and_then(|by_id| by_id.remove(&token_id));
+		// check if authorized
+	if sender_id != &owner_id {
+		// if approval extension is NOT being used, or if token has no approved accounts
+		if approved_account_ids.is_none() {
+			env::panic(b"Unauthorized")
+		}
+
+		// Approval extension is being used; get approval_id for sender.
+		let actual_approval_id = approved_account_ids.as_ref().unwrap().get(sender_id);
+
+		// Panic if sender not approved at all
+		if actual_approval_id.is_none() {
+			env::panic(b"Sender not approved");
+		}
+
+		// If approval_id included, check that it matches
+		if let Some(enforced_approval_id) = approval_id {
+			let actual_approval_id = actual_approval_id.unwrap();
+			assert_eq!(
+			actual_approval_id, &enforced_approval_id,
+			"The actual approval_id {} is different from the given approval_id {}",
+			actual_approval_id, enforced_approval_id,
+			);
+		}
+	}
+
+    }
+
+    fn verify_ft_transferable(){
+
+
+    }
+
     /// Transfer from current owner to receiver_id, checking that sender is allowed to transfer.
     /// Clear approvals, if approval extension being used.
     /// Return previous owner and approvals.
@@ -254,11 +292,13 @@ impl MultiToken {
         memo: Option<String>,
     ) -> (AccountId, Option<HashMap<AccountId, u64>>) {
 	let token_type = self.token_type_index.get(token_id).expect("Token not found");
-        // clear approvals, if using Approval Management extension
-        // this will be rolled back by a panic if sending fails
-        let approved_account_ids =
-            self.approvals_by_id.as_mut().and_then(|by_id| by_id.remove(&token_id));
 
+	
+	let mut owner_id; 
+
+	let balance = self.ft_owners_by_id.get(token_id).and_then(|by_id| by_id.get(&sender_id))
+
+	self.nft_owner_by_id.get(token_id);
         // check if authorized
         if sender_id != &owner_id {
 	    // if the token transferred is a fungible type and you are not the owner then cannot perform
