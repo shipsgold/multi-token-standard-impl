@@ -7,8 +7,9 @@ pub use self::core_impl::*;
 pub use self::receiver::*;
 pub use self::resolver::*;
 
-use near_sdk::json_types::{Base64VecU8, ValidAccountId};
+use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
 use crate::metadata::TokenMetadata;
+use near_contract_standards::non_fungible_token;
 use crate::token::{Token, TokenId};
 
 pub trait MultiTokenCore {
@@ -167,19 +168,22 @@ pub trait MultiTokenCore {
         msg: String,
     ) -> PromiseOrValue<bool>;
 
+    fn nft_token(&self, token_id: TokenId)-> Option<non_fungible_token::Token>;
+
     /// Get the balance of an an account given token_id. For fungible token returns back amount, for 
     /// non fungible token it returns back constant 1.
-    fn balance_of(owner_id: ValidAccountId, token_id: TokenId)-> u128;
+    fn ft_balance_of(&self, owner_id: ValidAccountId, token_id: TokenId)-> U128;
 
+    // TODO discuss
     /// Get the balances of an an account given token_ids. For fungible token returns back amount, for 
-    /// non fungible token it returns back constant 1. returns vector of balances corresponding to token_ids 
     /// in a 1-1 mapping
-    fn balance_of_batch(owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>;
+    /// fn ft_balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>;
 
     /// Returns the total supply of the token in a decimal string representation given token_id.
-    fn total_supply(token_id: TokenId)->u128;
+    fn ft_total_supply(&self, token_id: TokenId) -> U128;
 
-    /// Returns the total supplies of the tokens given by token_ids in a decimal string representation.
-    fn total_supply_batch(token_ids: Vec<TokenId>) -> Vec<u128>;
+    // TODO discuss 
+    // Returns the total supplies of the tokens given by token_ids in a decimal string representation.
+    // fn ft_supply_batch(&self, token_ids: Vec<TokenId>) -> Vec<u128>;
 }
 
