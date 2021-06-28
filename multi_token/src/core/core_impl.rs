@@ -1,19 +1,16 @@
-use super::resolver::MultiTokenResolver;
 use crate::core::MultiTokenCore;
-use crate::metadata::TokenMetadata;
-use crate::token::{Token, TokenId, TokenType};
-//use crate::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
+use crate::token::{TokenId, TokenType};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, TreeMap, UnorderedSet};
-use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
+use near_sdk::collections::{LookupMap, TreeMap};
+use near_sdk::json_types::{ValidAccountId, U128};
 use near_contract_standards::fungible_token::core_impl::{FungibleToken};
 use near_contract_standards::non_fungible_token::core::{NonFungibleToken, NonFungibleTokenCore};
 use near_contract_standards::fungible_token::core::{FungibleTokenCore};
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata};
 use near_contract_standards::non_fungible_token;
 use near_sdk::{
-	assert_one_yocto, env, ext_contract, log, AccountId, Balance, BorshStorageKey, CryptoHash,
-	Gas, IntoStorageKey, PromiseOrValue, PromiseResult, StorageUsage,
+	assert_one_yocto, env, ext_contract, AccountId, Balance,
+	Gas, IntoStorageKey, PromiseOrValue,
 };
 use std::collections::HashMap;
 const GAS_FOR_RESOLVE_TRANSFER: Gas = 5_000_000_000_000;
@@ -102,18 +99,19 @@ impl MultiToken {
 		T: IntoStorageKey,
 	    {
 		   let nft_tokens = NonFungibleToken::new(nft_owner_by_id_prefix,
-			owner_id,
+			owner_id.clone(),
 			nft_token_metadata_prefix,
 			nft_enumeration_prefix,
 			nft_approval_prefix);
-		   let ft_tokens = TreeMap::new(ft_prefix); 
-		   let ft_metadata = LookupMap::new([ft_prefix.into_storage_key(), "m".into()].concat());
+		   let ft_pre = ft_prefix.into_storage_key();
+		   let ft_tokens = TreeMap::new(ft_pre.clone()); 
+		   let ft_metadata = LookupMap::new([ft_pre.clone(), "m".into()].concat());
 		   let token_type_index = LookupMap::new(token_type_prefix); 
 		   Self {
 			   owner_id: owner_id.into(),
 			   nft_tokens,
 			   ft_tokens,
-			   ft_prefix: ft_prefix.into_storage_key(),
+			   ft_prefix: ft_pre,
 			   ft_prefix_index:0,
 			   ft_metadata,
 			   token_type_index,
@@ -141,19 +139,18 @@ impl MultiToken {
         approval_id: Option<u64>,
     ) -> (AccountId, Option<HashMap<AccountId, u64>>) {
 	let token_type = self.token_type_index.get(token_id).expect("Token not found");
-
-	 match self.token_type_index.get(token_id) {
-		Some(TokenType::NFT) => { 
+	 match token_type {
+		TokenType::NFT => { 
 			self.nft_tokens.internal_transfer(sender_id,receiver_id,token_id,approval_id, memo)
 		},
-		Some(TokenType::FT) => { 
+		TokenType::FT => { 
 			self.ft_tokens.get(token_id).unwrap().internal_transfer(sender_id, receiver_id, amount, memo);
 			(sender_id.into(), None)  
-		},
+		}
 	}
     }
 
-    pub fn internal_transfer_batch(&self,
+    pub fn internal_transfer_batch(&mut self,
         	sender_id: &AccountId,
 		receiver_id: &AccountId,
 		token_ids: &Vec<TokenId>,
@@ -165,7 +162,7 @@ impl MultiToken {
 			panic!("Number of token ids and amounts must be equal")
 		}
 		token_ids.iter().enumerate().map(|(idx, token_id)| {
-			self.internal_transfer(&sender_id, &receiver_id.into(), &token_id, amounts[idx].into(), memo, approval_id)
+			self.internal_transfer(&sender_id, &receiver_id.into(), &token_id, amounts[idx].into(), memo.clone(), approval_id)
 		}).collect()
     }
 
@@ -234,7 +231,7 @@ impl MultiTokenCore for MultiToken {
 	){
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		self.internal_transfer_batch(&sender_id, &receiver_id.into(), &token_ids, &amounts, memo, approval_id);
+		self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo, approval_id);
 
 	}
 
@@ -247,7 +244,7 @@ impl MultiTokenCore for MultiToken {
 		msg: String)->PromiseOrValue<bool>{
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		let prev_state= self.internal_transfer_batch(&sender_id, &receiver_id.into(), &token_ids, &amounts, memo, approval_id);
+		let prev_state= self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo, approval_id);
 		let mut old_owners:Vec<AccountId> = Vec::new();
 		let mut old_approvals: Vec<Option<HashMap<AccountId, u64>>> = Vec::new();
 		prev_state.iter().for_each(|(old_owner_id, old_approval)| {
@@ -257,9 +254,9 @@ impl MultiTokenCore for MultiToken {
 
 		ext_receiver::multi_on_transfer(
 		    sender_id.clone(),
-		    old_owners,
-		    token_ids,
-		    amounts.into(),
+		    old_owners.clone(),
+		    token_ids.clone(),
+		    amounts.clone().into(),
 		    msg,
 		    receiver_id.as_ref(),
 		    NO_DEPOSIT,
@@ -281,8 +278,8 @@ impl MultiTokenCore for MultiToken {
 	}
 
 
-	fn nft_token(&self, token_id: TokenId) -> Option<non_fungible_token::Token> {
-		self.nft_tokens.nft_token(token_id)
+	fn nft_token(self, token_id: TokenId) -> Option<non_fungible_token::Token> {
+		self.nft_tokens.nft_token(token_id).clone()
 	}
 
 	fn ft_balance_of(&self, owner_id: ValidAccountId, token_id: TokenId) -> U128{
