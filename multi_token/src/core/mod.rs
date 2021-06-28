@@ -7,6 +7,7 @@ pub use self::core_impl::*;
 pub use self::receiver::*;
 pub use self::resolver::*;
 
+use near_sdk::{PromiseOrValue};
 use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
 use crate::metadata::TokenMetadata;
 use near_contract_standards::non_fungible_token;
@@ -83,7 +84,7 @@ pub trait MultiTokenCore {
         &mut self,
         receiver_id: ValidAccountId,
         token_id: TokenId,
-        amount: u128,
+        amount: U128,
         approval_id: Option<u64>,
         memo: Option<String>,
         msg: String,
@@ -119,8 +120,8 @@ pub trait MultiTokenCore {
     fn multi_batch_transfer(&mut self,
         receiver_id: ValidAccountId,
         token_id: Vec<TokenId>,
-        amounts: Vec<u128>,
-        approval_ids: Option<Vec<u64>>,
+        amounts: Vec<U128>,
+        approval_ids: Option<u64>,
         memo: Option<String>,
         msg: String,       
     );
@@ -163,8 +164,8 @@ pub trait MultiTokenCore {
         &mut self,
         receiver_id: ValidAccountId,
         token_ids: Vec<TokenId>,
-        amounts: Vec<u128>,
-        approval_ids: Option<Vec<u64>>,
+        amounts: Vec<U128>,
+        approval_ids: Option<u64>,
         memo: Option<String>,
         msg: String,
     ) -> PromiseOrValue<bool>;
