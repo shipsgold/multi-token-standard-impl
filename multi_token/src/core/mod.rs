@@ -8,11 +8,10 @@ pub use self::receiver::*;
 pub use self::resolver::*;
 
 use near_sdk::{PromiseOrValue};
-use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
-use crate::metadata::TokenMetadata;
+use near_sdk::json_types::{ValidAccountId, U128};
 use near_contract_standards::non_fungible_token;
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata};
-use crate::token::{Token, TokenId};
+use crate::token::{TokenId};
 
 pub trait MultiTokenCore {
     /// Basic token transfer. Transfer a token or tokens given a token_id. The token id can correspond to  
@@ -170,7 +169,7 @@ pub trait MultiTokenCore {
         msg: String,
     ) -> PromiseOrValue<bool>;
 
-    fn nft_token(&self, token_id: TokenId)-> Option<non_fungible_token::Token>;
+    fn nft_token(self, token_id: TokenId)-> Option<non_fungible_token::Token>;
 
     /// Get the metadata for your token if it has it this can just return none if it's never in use
     fn ft_metadata(&self, token_id: TokenId) -> Option<FungibleTokenMetadata>;
