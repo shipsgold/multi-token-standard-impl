@@ -35,7 +35,6 @@ pub trait MultiTokenResolver {
         previous_owner_id: AccountId,
         receiver_id: AccountId,
         token_ids: Vec<TokenId>,
-        amounts: Vec<u128>,
         approvals: Option<Vec<HashMap<AccountId, u64>>>,
     ) -> bool;
 }
