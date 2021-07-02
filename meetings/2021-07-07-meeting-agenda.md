@@ -32,10 +32,17 @@ What makes ERC-1155 special? ERC-1155 has several features that are of note,appr
 
 ### Resources 
 [Multi Token Standard Talk So far](https://gov.near.org/t/multi-token-standard-discussion/2917)
+
 [WIP: Composition of tokens implementation ](https://github.com/shipsgold/multi-token-standard-impl/pull/4)
+
 [WIP: New asset class implementation ](https://github.com/shipsgold/multi-token-standard-impl/pull/1)
+
 [WIP: ERC-1155 sans semi-fungible implementation](https://coming-soon)
+
 [ERC-1155](https://github.com/ethereum/EIPs/issues/1155)
+
 [Multi Fungible Token Proposal for multiple NEP-141s](https://github.com/near/NEPs/pull/228)
+
 [Non Fungible Token NEP-171](https://github.com/near/NEPs/discussions/171)
-[Fungible Token NEP-141](https://github.com/near/NEPs/discussions/146)t st
+
+[Fungible Token NEP-141](https://github.com/near/NEPs/discussions/146)
