@@ -28,7 +28,7 @@ pub trait MultiTokenMetadataProvider {
     fn multi_metadata(&self) -> MultiContractMetadata;
 }
 
-struct MultiContractMetadata {
+pub struct MultiContractMetadata {
     pub spec: String,              // required, essentially a version like "nft-1.0.0"
     pub name: String,              // required, ex. "Mosaics"
     pub symbol: String,            // required, ex. "MOSIAC"
