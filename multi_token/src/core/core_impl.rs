@@ -334,13 +334,13 @@ impl MultiTokenCore for MultiToken {
 
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount, approval_id, memo);
+		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), approval_id, memo);
 	}
 
 	fn multi_transfer_call(&mut self,
 		receiver_id: ValidAccountId,
 		token_id: TokenId,
-		amount: u128,
+		amount: U128,
 		approval_id: Option<u64>,
 		memo: Option<String>,
 		msg: String,
@@ -348,7 +348,7 @@ impl MultiTokenCore for MultiToken {
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
 		let (old_owner, old_approvals) =
-		    self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount, approval_id, memo);
+		    self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), approval_id, memo);
 		// Initiating receiver's call and the callback
 		ext_receiver::multi_on_transfer(
 		    sender_id.clone(),
