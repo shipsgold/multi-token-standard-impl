@@ -22,11 +22,11 @@ const NO_DEPOSIT: Balance = 0;
 trait MultiResolver {
 	fn multi_resolve_transfer(
 		&mut self,
-		previous_owner_id: AccountId,
+		previous_owner_ids: Vec<AccountId>,
 		receiver_id: AccountId,
-		token_id: TokenId,
-		amount: u128,
-		approved_account_ids: Option<HashMap<AccountId, u64>>,
+		token_ids: Vec<TokenId>,
+		amounts: Vec<U128>,
+		approved_account_ids: Vec<Option<HashMap<AccountId, u64>>>,
 	) -> bool;
 }
 
@@ -36,8 +36,9 @@ pub trait MultiReceiver {
 	fn multi_on_transfer(
 		&mut self,
 		sender_id: AccountId,
-		previous_owner_id: AccountId,
-		token_id: TokenId,
+		previous_owner_ids: Vec<AccountId>,
+		token_ids: Vec<TokenId>,
+		amounts: Vec<U128>,
 		msg: String,
 	) -> PromiseOrValue<bool>;
 }
@@ -110,11 +111,11 @@ impl MultiToken {
 			};
 
 		let owner_prefix: Vec<u8> = owner_by_id_prefix.into_storage_key();
-		let token_type_prefix = [owner_prefix, "t".into()].concat();
+		let token_type_prefix = [owner_prefix.clone(), "t".into()].concat();
 		
 		let mut this = Self {
 			owner_id: owner_id.into(),
-			owner_prefix,
+			owner_prefix: owner_prefix.clone(),
 			extra_storage_in_bytes_per_nft_token: 0,
 			extra_storage_in_bytes_per_ft_token_balance: 0,
 			extra_storage_in_bytes_per_ft_token_creation: 0,
@@ -136,7 +137,7 @@ impl MultiToken {
 
 	// returns the current storage key prefix for a ft 
 	fn get_balances_prefix(&self) -> Vec<u8> {
-		let mut ft_token_prefix = self.owner_prefix;
+		let mut ft_token_prefix = self.owner_prefix.clone();
 		ft_token_prefix.extend(&self.ft_prefix_index.to_be_bytes().to_vec());
 		ft_token_prefix
 	} 
@@ -241,9 +242,12 @@ impl MultiToken {
 	};
     }
 
-    fn verify_nft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, owner_id: &AccountId, approval_id: Option<u64>) -> (AccountId, Option<HashMap<AccountId, u64>>){
+    //TODO Rename functionality as it mutates the approvals 
+    fn verify_update_nft_transferable(&mut self, token_id: &TokenId, sender_id: &AccountId, owner_id: &AccountId, approval_id: Option<u64>) -> (AccountId, Option<HashMap<AccountId, u64>>){
         // clear approvals, if using Approval Management extension
         // this will be rolled back by a panic if sending fails
+	
+	// TODO should not mutate approvals or 
         let approved_account_ids = self.approvals_by_id.as_mut().and_then(|by_id| by_id.remove(&token_id));
 		// check if authorized
 	if sender_id != owner_id {
@@ -301,7 +305,7 @@ impl MultiToken {
 		TokenType::NFT => {
 			owner_id = self.nft_owner_by_id.get(token_id).unwrap(); 
 			assert_ne!(&owner_id, receiver_id, "Current and next owner must differ");
-			owner_and_approval = self.verify_nft_transferable(token_id, sender_id, &owner_id, approval_id);
+			owner_and_approval = self.verify_update_nft_transferable(token_id, sender_id, &owner_id, approval_id);
 			let balance = self.ft_owners_by_id.get(token_id).and_then(|by_id| by_id.get(&sender_id)).unwrap();
 			if balance < amount {
 				panic!("Amount exceeds balance");
@@ -309,7 +313,7 @@ impl MultiToken {
 		},
 		TokenType::FT => {
 			self.verify_ft_transferable(token_id, sender_id, receiver_id);
-			owner_and_approval = (owner_id, None)
+			owner_and_approval = (owner_id.clone(), None)
 		}
 	}	
         self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
@@ -321,6 +325,22 @@ impl MultiToken {
 	owner_and_approval
         // return previous owner & approvals
     }
+
+    pub fn internal_transfer_batch(&mut self,
+	sender_id: &AccountId,
+	receiver_id: &AccountId,
+	token_ids: &Vec<TokenId>,
+	amounts: &Vec<U128>,
+	memo: Option<String>,
+	approval_id: Option<u64>) ->Vec<(AccountId, Option<HashMap<AccountId, u64>>)>{
+	if token_ids.len() != amounts.len(){
+		panic!("Number of token ids and amounts must be equal")
+	}
+	token_ids.iter().enumerate().map(|(idx, token_id)| {
+		self.internal_transfer(&sender_id, &receiver_id.into(), &token_id, amounts[idx].into(), approval_id, memo.clone())
+	}).collect()
+    }
+
 
 }
 
@@ -353,24 +373,88 @@ impl MultiTokenCore for MultiToken {
 		// Initiating receiver's call and the callback
 		ext_receiver::multi_on_transfer(
 		    sender_id.clone(),
-		    old_owner.clone(),
-		    token_id.clone(),
+		    vec![old_owner.clone()],
+		    vec![token_id.clone()],
+		    vec![amount],
 		    msg,
 		    receiver_id.as_ref(),
 		    NO_DEPOSIT,
 		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
 		.then(ext_self::multi_resolve_transfer(
-		    old_owner,
+		    vec![old_owner],
 		    receiver_id.into(),
-		    token_id,
-		    amount.into(),
+		    vec![token_id],
+		    vec![amount.into()],
+		    vec![old_approvals],
+		    &env::current_account_id(),
+		    NO_DEPOSIT,
+		    GAS_FOR_RESOLVE_TRANSFER,
+		))
+		.into()
+	}
+
+	fn multi_batch_transfer(&mut self,
+		receiver_id: ValidAccountId,
+		token_ids:Vec<TokenId>,
+		amounts: Vec<U128>,
+		approval_id: Option<u64>,
+		memo: Option<String>,
+		msg: String,
+	){
+		assert_one_yocto();
+		let sender_id = env::predecessor_account_id();
+		self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo, approval_id);
+
+	}
+
+	fn multi_batch_transfer_call(&mut self, 
+		receiver_id: ValidAccountId, 
+		token_ids: Vec<TokenId>, 
+		amounts: Vec<U128>, 
+		approval_id: Option<u64>, 
+		memo: Option<String>, 
+		msg: String)->PromiseOrValue<bool>{
+		assert_one_yocto();
+		let sender_id = env::predecessor_account_id();
+		let prev_state= self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo, approval_id);
+		let mut old_owners:Vec<AccountId> = Vec::new();
+		let mut old_approvals: Vec<Option<HashMap<AccountId, u64>>> = Vec::new();
+		prev_state.iter().for_each(|(old_owner_id, old_approval)| {
+			old_owners.push(old_owner_id.to_string());
+			old_approvals.push(old_approval.clone());
+		});
+		// TODO make this efficient
+		ext_receiver::multi_on_transfer(
+		    sender_id.clone(),
+		    old_owners.clone(),
+		    token_ids.clone(),
+		    amounts.clone().into(),
+		    msg,
+		    receiver_id.as_ref(),
+		    NO_DEPOSIT,
+		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
+		)
+		.then(ext_self::multi_resolve_transfer(
+		    old_owners,
+		    receiver_id.into(),
+		    token_ids,
+		    amounts,
 		    old_approvals,
 		    &env::current_account_id(),
 		    NO_DEPOSIT,
 		    GAS_FOR_RESOLVE_TRANSFER,
 		))
 		.into()
+	}
+
+	fn balance_of(&self, owner_id: ValidAccountId, token_id: TokenId) -> U128{
+		let ft_token = self.ft_owners_by_id.get(&token_id).expect("balance: token id not found");
+		ft_token.get(&owner_id.into()).unwrap().into()
+	}
+
+	fn total_supply(&self, token_id: TokenId) -> U128{
+		self.ft_token_supply_by_id.get(&token_id).expect("supply: token id not found").into()
 	}
 
 	fn multi_token(self, token_id: TokenId) -> Option<Token> {
