@@ -363,7 +363,7 @@ impl MultiTokenCore for MultiToken {
 		    old_owner,
 		    receiver_id.into(),
 		    token_id,
-		    amount,
+		    amount.into(),
 		    old_approvals,
 		    &env::current_account_id(),
 		    NO_DEPOSIT,

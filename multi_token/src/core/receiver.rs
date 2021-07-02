@@ -24,6 +24,7 @@ pub trait MultiTokenReceiver {
         sender_id: AccountId,
         previous_owner_id: AccountId,
         token_id: Vec<TokenId>,
+        amount: u128,
         msg: String,
     ) -> PromiseOrValue<bool>;
 
