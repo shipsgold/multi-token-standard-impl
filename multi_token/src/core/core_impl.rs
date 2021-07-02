@@ -25,6 +25,7 @@ trait MultiResolver {
 		previous_owner_id: AccountId,
 		receiver_id: AccountId,
 		token_id: TokenId,
+		amount: u128,
 		approved_account_ids: Option<HashMap<AccountId, u64>>,
 	) -> bool;
 }
