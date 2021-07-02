@@ -240,13 +240,12 @@ impl MultiToken {
 	};
     }
 
-    fn verify_nft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, approval_id: Option<u64>){
-	let owner_id = self.nft_owner_by_id.get(token_id).unwrap();
+    fn verify_nft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, owner_id: &AccountId, approval_id: Option<u64>) -> (AccountId, Option<HashMap<AccountId, u64>>){
         // clear approvals, if using Approval Management extension
         // this will be rolled back by a panic if sending fails
         let approved_account_ids = self.approvals_by_id.as_mut().and_then(|by_id| by_id.remove(&token_id));
 		// check if authorized
-	if sender_id != &owner_id {
+	if sender_id != owner_id {
 		// if approval extension is NOT being used, or if token has no approved accounts
 		if approved_account_ids.is_none() {
 			env::panic(b"Unauthorized")
@@ -270,12 +269,16 @@ impl MultiToken {
 			);
 		}
 	}
+	(owner_id.into(), approved_account_ids)
 
     }
 
-    fn verify_ft_transferable(){
-
-
+    fn verify_ft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, receiver_id: &AccountId){
+	if sender_id == receiver_id {
+	   panic!("Sender and receiver cannot be the same")
+	}
+	let token_holders = self.ft_owners_by_id.get(token_id).expect("Could not find token");
+	token_holders.get(sender_id).expect("Not a token owner");
     }
 
     /// Transfer from current owner to receiver_id, checking that sender is allowed to transfer.
@@ -291,55 +294,31 @@ impl MultiToken {
         memo: Option<String>,
     ) -> (AccountId, Option<HashMap<AccountId, u64>>) {
 	let token_type = self.token_type_index.get(token_id).expect("Token not found");
-
-	
-	let mut owner_id; 
-
-	let balance = self.ft_owners_by_id.get(token_id).and_then(|by_id| by_id.get(&sender_id))
-
-	self.nft_owner_by_id.get(token_id);
-        // check if authorized
-        if sender_id != &owner_id {
-	    // if the token transferred is a fungible type and you are not the owner then cannot perform
-	    // transfer
-	    if(token_type == TokenType::FT) {
-                env::panic(b"Unauthorized")
-	    }
-            // if approval extension is NOT being used, or if token has no approved accounts
-            if approved_account_ids.is_none() {
-                env::panic(b"Unauthorized")
-            }
-
-            // Approval extension is being used; get approval_id for sender.
-            let actual_approval_id = approved_account_ids.as_ref().unwrap().get(sender_id);
-
-            // Panic if sender not approved at all
-            if actual_approval_id.is_none() {
-                env::panic(b"Sender not approved");
-            }
-
-            // If approval_id included, check that it matches
-            if let Some(enforced_approval_id) = approval_id {
-                let actual_approval_id = actual_approval_id.unwrap();
-                assert_eq!(
-                    actual_approval_id, &enforced_approval_id,
-                    "The actual approval_id {} is different from the given approval_id {}",
-                    actual_approval_id, enforced_approval_id,
-                );
-            }
-        }
-
-        assert_ne!(&owner_id, receiver_id, "Current and next owner must differ");
-
+	let mut owner_id = sender_id.clone();
+	let owner_and_approval;
+	match token_type {
+		TokenType::NFT => {
+			owner_id = self.nft_owner_by_id.get(token_id).unwrap(); 
+			assert_ne!(&owner_id, receiver_id, "Current and next owner must differ");
+			owner_and_approval = self.verify_nft_transferable(token_id, sender_id, &owner_id, approval_id);
+			let balance = self.ft_owners_by_id.get(token_id).and_then(|by_id| by_id.get(&sender_id)).unwrap();
+			if balance < amount {
+				panic!("Amount exceeds balance");
+			}
+		},
+		TokenType::FT => {
+			self.verify_ft_transferable(token_id, sender_id, receiver_id);
+			owner_and_approval = (owner_id, None)
+		}
+	}	
         self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
 
         log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
         if let Some(memo) = memo {
             log!("Memo: {}", memo);
         }
-
+	owner_and_approval
         // return previous owner & approvals
-        (owner_id, approved_account_ids)
     }
 
 }
@@ -349,7 +328,7 @@ impl MultiTokenCore for MultiToken {
 	fn multi_transfer(&mut self,
 		receiver_id: ValidAccountId,
 		token_id: TokenId, 
-		amount: u128, 
+		amount: U128, 
 		approval_id: Option<u64>, 
 		memo: Option<String>) {
 
@@ -394,9 +373,9 @@ impl MultiTokenCore for MultiToken {
 	}
 
 	fn multi_token(self, token_id: TokenId) -> Option<Token> {
-		let owner_id = self.owner_by_id.get(&token_id)?;
-		let supply = self.token_supply_by_id.get(&token_id)?;
-		let token_type = self.token_type_index.get(&token_id);
+		let owner_id = self.nft_owner_by_id.get(&token_id)?;
+		let supply = self.ft_token_supply_by_id.get(&token_id)?;
+		let token_type = self.token_type_index.get(&token_id).expect("Token not found");
 		let metadata = self.token_metadata_by_id.and_then(|by_id| by_id.get(&token_id));
 		let approved_account_ids = self
 		    .approvals_by_id
