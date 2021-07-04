@@ -277,31 +277,30 @@ impl MultiToken {
 
 
 
-	    /// Transfer token_id from `from` to `to`
-    ///
-    /// Do not perform any safety checks or do any logging
-    pub fn internal_transfer_unguarded(
-        &mut self,
-        token_id: &TokenId,
-	amount: u128,
-        from: &AccountId,
-        to: &AccountId,
-    ) {
-        // update owner
-	 match self.token_type_index.get(token_id) {
+	/// Transfer token_id from `from` to `to`
+	///
+	/// Do not perform any safety checks or do any logging
+	pub fn internal_transfer_unguarded( &mut self, 
+		token_id: &TokenId,
+		amount: u128,
+		from: &AccountId,
+		to: &AccountId,
+	) {
+	// update owner
+		match self.token_type_index.get(token_id) {
 		Some(TokenType::NFT) => { self.nft_owner_by_id.insert(token_id,to); },
 		Some(TokenType::FT) => { self.ft_owners_by_id.get(token_id).unwrap().insert(to, &amount);},
 		_ => (),
 	};
-    }
+	}
 
-    //TODO Rename functionality as it mutates the approvals 
-    fn verify_update_nft_transferable(&mut self, token_id: &TokenId, sender_id: &AccountId, owner_id: &AccountId, approval_id: Option<u64>) -> (AccountId, Option<HashMap<AccountId, u64>>){
-        // clear approvals, if using Approval Management extension
-        // this will be rolled back by a panic if sending fails
-	
+	//TODO Rename functionality as it mutates the approvals 
+	fn verify_update_nft_transferable(&mut self, token_id: &TokenId, sender_id: &AccountId, owner_id: &AccountId, approval_id: Option<u64>) -> (AccountId, Option<HashMap<AccountId, u64>>){
+	// clear approvals, if using Approval Management extension
+	// this will be rolled back by a panic if sending fails
+
 	// TODO should not mutate approvals or 
-        let approved_account_ids = self.approvals_by_id.as_mut().and_then(|by_id| by_id.remove(&token_id));
+	let approved_account_ids = self.approvals_by_id.as_mut().and_then(|by_id| by_id.remove(&token_id));
 		// check if authorized
 	if sender_id != owner_id {
 		// if approval extension is NOT being used, or if token has no approved accounts
@@ -329,28 +328,28 @@ impl MultiToken {
 	}
 	(owner_id.into(), approved_account_ids)
 
-    }
+	}
 
-    fn verify_ft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, receiver_id: &AccountId){
+	fn verify_ft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, receiver_id: &AccountId){
 	if sender_id == receiver_id {
-	   panic!("Sender and receiver cannot be the same")
+		panic!("Sender and receiver cannot be the same")
 	}
 	let token_holders = self.ft_owners_by_id.get(token_id).expect("Could not find token");
 	token_holders.get(sender_id).expect("Not a token owner");
-    }
+	}
 
-    /// Transfer from current owner to receiver_id, checking that sender is allowed to transfer.
-    /// Clear approvals, if approval extension being used.
-    /// Return previous owner and approvals.
-    pub fn internal_transfer(
-        &mut self,
-        sender_id: &AccountId,
-        receiver_id: &AccountId,
-        token_id: &TokenId,
+	/// Transfer from current owner to receiver_id, checking that sender is allowed to transfer.
+	/// Clear approvals, if approval extension being used.
+	/// Return previous owner and approvals.
+	pub fn internal_transfer(
+	&mut self,
+	sender_id: &AccountId,
+	receiver_id: &AccountId,
+	token_id: &TokenId,
 	amount: u128,
-        approval_id: Option<u64>,
-        memo: Option<String>,
-    ) -> (AccountId, Option<HashMap<AccountId, u64>>) {
+	approval_id: Option<u64>,
+	memo: Option<String>,
+	) -> (AccountId, Option<HashMap<AccountId, u64>>) {
 	let token_type = self.token_type_index.get(token_id).expect("Token not found");
 	let mut owner_id = sender_id.clone();
 	let owner_and_approval;
@@ -369,17 +368,17 @@ impl MultiToken {
 			owner_and_approval = (owner_id.clone(), None)
 		}
 	}	
-        self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
+	self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
 
-        log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
-        if let Some(memo) = memo {
-            log!("Memo: {}", memo);
-        }
+	log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
+	if let Some(memo) = memo {
+		log!("Memo: {}", memo);
+	}
 	owner_and_approval
-        // return previous owner & approvals
-    }
+	// return previous owner & approvals
+	}
 
-    pub fn internal_transfer_batch(&mut self,
+	pub fn internal_transfer_batch(&mut self,
 	sender_id: &AccountId,
 	receiver_id: &AccountId,
 	token_ids: &Vec<TokenId>,
@@ -392,7 +391,7 @@ impl MultiToken {
 	token_ids.iter().enumerate().map(|(idx, token_id)| {
 		self.internal_transfer(&sender_id, &receiver_id.into(), &token_id, amounts[idx].into(), approval_id, memo.clone())
 	}).collect()
-    }
+	}
 
 
 }
