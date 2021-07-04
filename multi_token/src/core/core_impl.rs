@@ -1,13 +1,13 @@
 use crate::core::MultiTokenCore;
 use crate::metadata::{MultiTokenMetadata, MULTI_METADATA_SPEC};
-use crate::token::{Token, TokenId, TokenType};
+use crate::token::{TokenId, TokenType};
 //use crate::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, TreeMap};
-use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
+use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{
-	assert_one_yocto, env, ext_contract, log, AccountId, Balance, BorshStorageKey, CryptoHash,
-	Gas, IntoStorageKey, PromiseOrValue, PromiseResult, StorageUsage,
+	assert_one_yocto, env, ext_contract, log, AccountId, Balance,
+	Gas, IntoStorageKey, PromiseOrValue, StorageUsage,
 };
 use std::collections::HashMap;
 
