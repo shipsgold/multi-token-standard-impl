@@ -7,6 +7,8 @@ pub mod core;
 pub mod metadata;
 /// The Token struct for the multi token standard.
 mod token;
+// Utils for the contract
+mod utils; 
 pub use self::token::{Token, TokenId, TokenType};
 
 /// NFT utility functions

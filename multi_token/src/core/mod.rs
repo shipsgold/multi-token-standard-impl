@@ -9,7 +9,7 @@ pub use self::resolver::*;
 
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{PromiseOrValue};
-use crate::token::{TokenId, Token};
+use crate::token::{TokenId};
 
 pub trait MultiTokenCore {
     /// Basic token transfer. Transfer a token or tokens given a token_id. The token id can correspond to  
