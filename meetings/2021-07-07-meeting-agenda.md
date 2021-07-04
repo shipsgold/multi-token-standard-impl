@@ -37,7 +37,7 @@ What makes ERC-1155 special? ERC-1155 has several features that are of note,appr
 
 [WIP: New asset class implementation ](https://github.com/shipsgold/multi-token-standard-impl/pull/1)
 
-[WIP: ERC-1155 sans semi-fungible implementation](https://coming-soon)
+[WIP: ERC-1155 sans semi-fungible implementation](https://github.com/shipsgold/multi-token-standard-impl/pull/5)
 
 [ERC-1155](https://github.com/ethereum/EIPs/issues/1155)
 
