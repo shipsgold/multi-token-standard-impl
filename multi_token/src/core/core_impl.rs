@@ -1,5 +1,5 @@
 use crate::core::MultiTokenCore;
-use crate::metadata::TokenMetadata;
+use crate::metadata::{MultiTokenMetadata, MULTI_METADATA_SPEC};
 use crate::token::{Token, TokenId, TokenType};
 //use crate::utils::{hash_account_id, refund_approved_account_ids, refund_deposit};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -78,7 +78,7 @@ pub struct MultiToken {
 	pub ft_token_supply_by_id: LookupMap<TokenId, u128>,
 
 	// required by metadata extension
-	pub token_metadata_by_id: Option<LookupMap<TokenId, TokenMetadata>>,
+	pub token_metadata_by_id: Option<LookupMap<TokenId, MultiTokenMetadata>>,
 
 	// required by approval extension
 	pub approvals_by_id: Option<LookupMap<TokenId, HashMap<AccountId, u64>>>,
@@ -179,19 +179,8 @@ impl MultiToken {
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
 			token_metadata_by_id.insert(
 				&tmp_token_id,
-				&TokenMetadata {
-					title: Some("a".repeat(64)),
-					description: Some("a".repeat(64)),
-					media: Some("a".repeat(64)),
-					media_hash: Some(Base64VecU8::from(
-						"a".repeat(64).as_bytes().to_vec(),
-					)),
-					copies: Some(1),
-					issued_at: None,
-					expires_at: None,
-					starts_at: None,
-					updated_at: None,
-					extra: None,
+				&MultiTokenMetadata {
+					spec: MULTI_METADATA_SPEC.to_string(),
 					reference: None,
 					reference_hash: None,
 				},
@@ -470,14 +459,4 @@ impl MultiTokenCore for MultiToken {
 		}).collect()
 	}
 
-	fn multi_token(self, token_id: TokenId) -> Option<Token> {
-		let owner_id = self.nft_owner_by_id.get(&token_id)?;
-		let supply = self.ft_token_supply_by_id.get(&token_id)?;
-		let token_type = self.token_type_index.get(&token_id).expect("Token not found");
-		let metadata = self.token_metadata_by_id.and_then(|by_id| by_id.get(&token_id));
-		let approved_account_ids = self
-		    .approvals_by_id
-		    .and_then(|by_id| by_id.get(&token_id).or_else(|| Some(HashMap::new())));
-		Some(Token { token_id, token_type, owner_id, supply, metadata, approved_account_ids })
-	}
 }

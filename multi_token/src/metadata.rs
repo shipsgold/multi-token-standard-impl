@@ -1,6 +1,7 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::Base64VecU8;
 use near_sdk::serde::{Deserialize, Serialize};
+use crate::token::TokenId;
 
 /// This spec can be treated like a version of the standard.
 pub const MULTI_METADATA_SPEC: &str = "multi-1.0.0";
@@ -25,20 +26,18 @@ pub struct TokenMetadata {
 
 /// Offers details on the contract-level metadata.
 pub trait MultiTokenMetadataProvider {
-    fn multi_metadata(&self) -> MultiContractMetadata;
+    fn multi_metadata(&self) -> MultiTokenMetadata;
 }
 
-pub struct MultiContractMetadata {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct MultiTokenMetadata {
     pub spec: String,              // required, essentially a version like "nft-1.0.0"
-    pub name: String,              // required, ex. "Mosaics"
-    pub symbol: String,            // required, ex. "MOSIAC"
-    pub icon: Option<String>,      // Data URL
-    pub base_uri: Option<String>, // Centralized gateway known to have reliable access to decentralized storage assets referenced by `reference` or `media` URLs
-    pub reference: Option<String>, // URL to a JSON file with more info
+    pub reference: Option<String>, // URL to a JSON file with more info may have {id} reference for token-id substitution
     pub reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.0
 }
 
-impl MultiContractMetadata {
+impl MultiTokenMetadata {
     pub fn assert_valid(&self) {
         assert_eq!(&self.spec, MULTI_METADATA_SPEC);
         assert_eq!(self.reference.is_some(), self.reference_hash.is_some());
@@ -46,18 +45,8 @@ impl MultiContractMetadata {
             assert_eq!(reference_hash.0.len(), 32, "Hash has to be 32 bytes");
         }
     }
-}
 
-impl TokenMetadata {
-    pub fn assert_valid(&self) {
-        assert_eq!(self.media.is_some(), self.media_hash.is_some());
-        if let Some(media_hash) = &self.media_hash {
-            assert_eq!(media_hash.0.len(), 32, "Media hash has to be 32 bytes");
-        }
-
-        assert_eq!(self.reference.is_some(), self.reference_hash.is_some());
-        if let Some(reference_hash) = &self.reference_hash {
-            assert_eq!(reference_hash.0.len(), 32, "Reference hash has to be 32 bytes");
-        }
+    pub fn metadata_uri(&self, token_id: TokenId) -> Option<String>{
+        self.reference.as_ref().and_then(|rf| Some(rf.replace("{id}", &token_id)))
     }
 }

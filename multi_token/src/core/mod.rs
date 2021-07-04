@@ -167,8 +167,6 @@ pub trait MultiTokenCore {
         msg: String,
     ) -> PromiseOrValue<bool>;
 
-    fn multi_token(self, token_id: TokenId)-> Option<Token>;
-
     /// Get the balance of an an account given token_id. For fungible token returns back amount, for 
     /// non fungible token it returns back constant 1.
     fn balance_of(&self, owner_id: ValidAccountId, token_id: TokenId)-> U128;
