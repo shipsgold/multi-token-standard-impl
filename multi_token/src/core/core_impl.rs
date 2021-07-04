@@ -453,8 +453,21 @@ impl MultiTokenCore for MultiToken {
 		ft_token.get(&owner_id.into()).unwrap().into()
 	}
 
+    	fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>{
+		token_ids.iter().map(|token_id|{
+			let ft_token = self.ft_owners_by_id.get(&token_id).expect("balance: token id not found");
+			ft_token.get(&owner_id.clone().into()).unwrap().into()
+		}).collect()
+	}
+
 	fn total_supply(&self, token_id: TokenId) -> U128{
 		self.ft_token_supply_by_id.get(&token_id).expect("supply: token id not found").into()
+	}
+
+	fn total_supply_batch(&self, token_ids: Vec<TokenId>) -> Vec<U128>{
+		token_ids.iter().map(|token_id|{
+			self.ft_token_supply_by_id.get(&token_id).expect("supply: token id not found").into()
+		}).collect()
 	}
 
 	fn multi_token(self, token_id: TokenId) -> Option<Token> {
@@ -466,7 +479,5 @@ impl MultiTokenCore for MultiToken {
 		    .approvals_by_id
 		    .and_then(|by_id| by_id.get(&token_id).or_else(|| Some(HashMap::new())));
 		Some(Token { token_id, token_type, owner_id, supply, metadata, approved_account_ids })
-	    }
-	
-
+	}
 }
