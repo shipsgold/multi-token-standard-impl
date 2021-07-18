@@ -1,6 +1,7 @@
 use crate::token::TokenId;
 
 use near_sdk::{AccountId, PromiseOrValue};
+use near_sdk::json_types::{U128};
 /// Used when SemiFungibleTokens are transferred using `sft_transfer_call`. This trait is implemented on the receiving contract, not on the SemiFungibleToken contract.
 pub trait SemiFungibleTokenReceiver {
     /// Take some action after receiving a SemiFungibleToken-tokens token
@@ -22,9 +23,8 @@ pub trait SemiFungibleTokenReceiver {
     fn sft_on_transfer(
         &mut self,
         sender_id: AccountId,
-        previous_owner_id: AccountId,
-        token_id: Vec<TokenId>,
-        amount: u128,
+        token_ids: Vec<TokenId>,
+        amounts: Vec<U128>,
         msg: String,
     ) -> PromiseOrValue<bool>;
 

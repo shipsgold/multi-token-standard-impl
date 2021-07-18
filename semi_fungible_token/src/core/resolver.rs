@@ -1,6 +1,7 @@
 use crate::token::TokenId;
 use near_sdk::AccountId;
 use std::collections::HashMap;
+use near_sdk::json_types::{U128};
 
 /// Used when SemiFungibleTokens are transferred using `sft_transfer_call`. This is the method that's called after `sft_on_transfer`. This trait is implemented on the SemiFungibleToken contract.
 pub trait SemiFungibleTokenResolver {
@@ -32,9 +33,8 @@ pub trait SemiFungibleTokenResolver {
     /// Returns true if tokens were successfully transferred to `receiver_id`.
     fn sft_resolve_transfer(
         &mut self,
-        previous_owner_id: AccountId,
         receiver_id: AccountId,
         token_ids: Vec<TokenId>,
-        approvals: Option<Vec<HashMap<AccountId, u64>>>,
+        amounts: Vec<U128>
     ) -> bool;
 }
