@@ -368,7 +368,6 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		token_ids:Vec<TokenId>,
 		amounts: Vec<U128>,
 		memo: Option<String>,
-		msg: String,
 	){
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();

@@ -104,7 +104,6 @@ pub trait SemiFungibleTokenCore {
         token_id: Vec<TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
-        msg: String,       
     );
     /// Batch transfer token/s and call a method on a receiver contract. A successful
     /// workflow will end in a success execution outcome to the callback on the SemiFungibleToken
