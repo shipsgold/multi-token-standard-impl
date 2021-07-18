@@ -17,7 +17,7 @@ use near_sdk::Promise;
 ///
 /// [approval management standard]: https://nomicon.io/Standards/NonFungibleToken/ApprovalManagement.html
 /// [core non-fungible token standard]: https://nomicon.io/Standards/NonFungibleToken/Core.html
-pub trait MultiTokenApproval {
+pub trait SemiFungibleTokenApproval {
     /// Add an approved account for a specific token.
     ///
     /// Requirements
@@ -39,8 +39,8 @@ pub trait MultiTokenApproval {
     /// * `msg`: optional string to be passed to `nft_on_approve`
     ///
     /// Returns void, if no `msg` given. Otherwise, returns promise call to
-    /// `multi_on_approve`, which can resolve with whatever it wants.
-    fn multi_approve(
+    /// `sft_on_approve`, which can resolve with whatever it wants.
+    fn sft_approve(
         &mut self,
         token_ids: Vec<TokenId>,
         account_id: ValidAccountId,
@@ -59,7 +59,7 @@ pub trait MultiTokenApproval {
     /// Arguments:
     /// * `token_ids`: the tokens for which to revoke an approval
     /// * `account_id`: the account to remove from `approvals`
-    fn multi_revoke(&mut self, token_ids: Vec<TokenId>, account_id: ValidAccountId);
+    fn sft_revoke(&mut self, token_ids: Vec<TokenId>, account_id: ValidAccountId);
 
     /// Revoke all approved accounts for a specific tokens.
     ///
@@ -72,7 +72,7 @@ pub trait MultiTokenApproval {
     ///
     /// Arguments:
     /// * `token_ids`: the token with approvals to revoke
-    fn multi_revoke_all(&mut self, token_ids: Vec<TokenId>);
+    fn sft_revoke_all(&mut self, token_ids: Vec<TokenId>);
 
     /// Check if a token is approved for transfer by a given account, optionally
     /// checking an approval_id
@@ -85,7 +85,7 @@ pub trait MultiTokenApproval {
     /// Returns:
     /// if `approval_id` given, `true` if `approved_account_id` is approved with given `approval_id`
     /// otherwise, `true` if `approved_account_id` is in list of approved accounts
-    fn multi_is_approved(
+    fn sft_is_approved(
         self,
         token_ids: Vec<TokenId>,
         approved_account_id: ValidAccountId,

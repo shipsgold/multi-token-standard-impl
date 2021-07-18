@@ -11,7 +11,7 @@ use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{PromiseOrValue};
 use crate::token::{TokenId};
 
-pub trait MultiTokenCore {
+pub trait SemiFungibleTokenCore {
     /// Basic token transfer. Transfer a token or tokens given a token_id. The token id can correspond to  
     /// either a NonFungibleToken or Fungible Token this is differeniated by the implementation.
     /// 
@@ -35,7 +35,7 @@ pub trait MultiTokenCore {
     ///    standard for full explanation.
     /// * `memo` (optional): for use cases that may benefit from indexing or
     ///    providing information for a transfer
-    fn multi_transfer(&mut self,
+    fn sft_transfer(&mut self,
         receiver_id: ValidAccountId,
         token_id: TokenId,
         amount: U128,
@@ -44,8 +44,8 @@ pub trait MultiTokenCore {
     );
 
     /// Transfer token/s and call a method on a receiver contract. A successful
-    /// workflow will end in a success execution outcome to the callback on the MultiToken
-    /// contract at the method `multi_resolve_transfer`.
+    /// workflow will end in a success execution outcome to the callback on the SemiFungibleToken
+    /// contract at the method `sft_resolve_transfer`.
     ///
     /// You can think of this as being similar to attaching  tokens to a
     /// function call. It allows you to attach any Fungible or Non Fungible Token in a call to a
@@ -56,10 +56,10 @@ pub trait MultiTokenCore {
     ///   purposes
     /// * Contract MUST panic if called by someone other than token owner or,
     ///   if using Approval Management, one of the approved accounts
-    /// * The receiving contract must implement `multi_on_transfer` according to the
-    ///   standard. If it does not, MultiToken contract's `multi_resolve_transfer` MUST deal
+    /// * The receiving contract must implement `sft_on_transfer` according to the
+    ///   standard. If it does not, SemiFungibleToken contract's `sft_resolve_transfer` MUST deal
     ///   with the resulting failed cross-contract call and roll back the transfer.
-    /// * Contract MUST implement the behavior described in `multi_resolve_transfer`
+    /// * Contract MUST implement the behavior described in `sft_resolve_transfer`
     /// * `approval_id` is for use with Approval Management extension, see
     ///   that document for full explanation.
     /// * If using Approval Management, contract MUST nullify approved accounts on
@@ -77,7 +77,7 @@ pub trait MultiTokenCore {
     /// * `msg`: specifies information needed by the receiving contract in
     ///    order to properly handle the transfer. Can indicate both a function to
     ///    call and the parameters to pass to that function.
-    fn multi_transfer_call(
+    fn sft_transfer_call(
         &mut self,
         receiver_id: ValidAccountId,
         token_id: TokenId,
@@ -114,7 +114,7 @@ pub trait MultiTokenCore {
     /// * `memo` (optional): for use cases that may benefit from indexing or
     ///    providing information for a transfer
 
-    fn multi_batch_transfer(&mut self,
+    fn sft_batch_transfer(&mut self,
         receiver_id: ValidAccountId,
         token_id: Vec<TokenId>,
         amounts: Vec<U128>,
@@ -123,8 +123,8 @@ pub trait MultiTokenCore {
         msg: String,       
     );
     /// Batch transfer token/s and call a method on a receiver contract. A successful
-    /// workflow will end in a success execution outcome to the callback on the MultiToken
-    /// contract at the method `multi_resolve_batch_transfer`.
+    /// workflow will end in a success execution outcome to the callback on the SemiFungibleToken
+    /// contract at the method `sft_resolve_batch_transfer`.
     ///
     /// You can think of this as being similar to attaching  tokens to a
     /// function call. It allows you to attach any Fungible or Non Fungible Token in a call to a
@@ -135,10 +135,10 @@ pub trait MultiTokenCore {
     ///   purposes
     /// * Contract MUST panic if called by someone other than token owner or,
     ///   if using Approval Management, one of the approved accounts
-    /// * The receiving contract must implement `multi_on_transfer` according to the
-    ///   standard. If it does not, MultiToken contract's `multi_resolve_batch_transfer` MUST deal
+    /// * The receiving contract must implement `sft_on_transfer` according to the
+    ///   standard. If it does not, SemiFungibleToken contract's `sft_resolve_batch_transfer` MUST deal
     ///   with the resulting failed cross-contract call and roll back the transfer.
-    /// * Contract MUST implement the behavior described in `multi_resolve_batch_transfer`
+    /// * Contract MUST implement the behavior described in `sft_resolve_batch_transfer`
     /// * `approval_id` is for use with Approval Management extension, see
     ///   that document for full explanation.
     /// * If using Approval Management, contract MUST nullify approved accounts on
@@ -157,7 +157,7 @@ pub trait MultiTokenCore {
     ///    order to properly handle the transfer. Can indicate both a function to
     ///    call and the parameters to pass to that function.
 
-    fn multi_batch_transfer_call(
+    fn sft_batch_transfer_call(
         &mut self,
         receiver_id: ValidAccountId,
         token_ids: Vec<TokenId>,

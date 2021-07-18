@@ -4,7 +4,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 use crate::token::TokenId;
 
 /// This spec can be treated like a version of the standard.
-pub const MULTI_METADATA_SPEC: &str = "multi-1.0.0";
+pub const SEMI_FUNGIBLE_METADATA_SPEC: &str = "multi-1.0.0";
 
 /// Metadata on the individual token level.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, BorshDeserialize, BorshSerialize)]
@@ -25,21 +25,21 @@ pub struct TokenMetadata {
 }
 
 /// Offers details on the contract-level metadata.
-pub trait MultiTokenMetadataProvider {
-    fn multi_metadata(&self) -> MultiTokenMetadata;
+pub trait SemiFungibleTokenMetadataProvider {
+    fn sft_metadata(&self) -> SemiFungibleTokenMetadata;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, BorshDeserialize, BorshSerialize)]
 #[serde(crate = "near_sdk::serde")]
-pub struct MultiTokenMetadata {
+pub struct SemiFungibleTokenMetadata {
     pub spec: String,              // required, essentially a version like "nft-1.0.0"
     pub reference: Option<String>, // URL to a JSON file with more info may have {id} reference for token-id substitution
     pub reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.0
 }
 
-impl MultiTokenMetadata {
+impl SemiFungibleTokenMetadata {
     pub fn assert_valid(&self) {
-        assert_eq!(&self.spec, MULTI_METADATA_SPEC);
+        assert_eq!(&self.spec, SEMI_FUNGIBLE_METADATA_SPEC);
         assert_eq!(self.reference.is_some(), self.reference_hash.is_some());
         if let Some(reference_hash) = &self.reference_hash {
             assert_eq!(reference_hash.0.len(), 32, "Hash has to be 32 bytes");

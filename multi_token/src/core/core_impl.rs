@@ -1,5 +1,5 @@
-use crate::core::MultiTokenCore;
-use crate::metadata::{MultiTokenMetadata, MULTI_METADATA_SPEC};
+use crate::core::SemiFungibleTokenCore;
+use crate::metadata::{SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
 use crate::utils::{refund_deposit};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -20,7 +20,7 @@ const NO_DEPOSIT: Balance = 0;
 
 #[ext_contract(ext_self)]
 trait MultiResolver {
-	fn multi_resolve_transfer(
+	fn sft_resolve_transfer(
 		&mut self,
 		previous_owner_ids: Vec<AccountId>,
 		receiver_id: AccountId,
@@ -33,7 +33,7 @@ trait MultiResolver {
 #[ext_contract(ext_receiver)]
 pub trait MultiReceiver {
 	/// Returns true if token should be returned to `sender_id`
-	fn multi_on_transfer(
+	fn sft_on_transfer(
 		&mut self,
 		sender_id: AccountId,
 		previous_owner_ids: Vec<AccountId>,
@@ -46,13 +46,13 @@ pub trait MultiReceiver {
 
 /// Implementation of multi-token standard.
 /// There are next traits that any contract may implement:
-///     - MultiTokenCore -- interface with multi_transfer/balance/supply methods. MultiToken provides methods for it.
-///     - MultiTokenApproval -- interface with multi_approve methods. MultiToken provides methods for it.
-///     - MultiTokenMetadata -- return metadata for the token in NEP-177, up to contract to implement.
+///     - SemiFungibleTokenCore -- interface with sft_transfer/balance/supply methods. SemiFungibleToken provides methods for it.
+///     - SemiFungibleTokenApproval -- interface with sft_approve methods. SemiFungibleToken provides methods for it.
+///     - SemiFungibleTokenMetadata -- return metadata for the token in NEP-177, up to contract to implement.
 ///
 /// For example usage, see examples/non-fungible-token/src/lib.rs.
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct MultiToken {
+pub struct SemiFungibleToken {
 	// owner of contract; this is the only account allowed to call `mint`
 	pub owner_id: AccountId,
 
@@ -78,14 +78,14 @@ pub struct MultiToken {
 	pub ft_token_supply_by_id: LookupMap<TokenId, u128>,
 
 	// required by metadata extension
-	pub token_metadata_by_id: Option<LookupMap<TokenId, MultiTokenMetadata>>,
+	pub token_metadata_by_id: Option<LookupMap<TokenId, SemiFungibleTokenMetadata>>,
 
 	// required by approval extension
 	pub approvals_by_id: Option<LookupMap<TokenId, HashMap<AccountId, u64>>>,
 	pub next_approval_id_by_id: Option<LookupMap<TokenId, u64>>,
 }
 
-impl MultiToken {
+impl SemiFungibleToken {
 	pub fn new<Q, R, S, T, U>(
 		owner_by_id_prefix: Q,
 		owner_id: ValidAccountId,
@@ -140,7 +140,7 @@ impl MultiToken {
 		token_type: TokenType,
 		amount: U128,
 		token_owner_id: ValidAccountId,
-		token_metadata: Option<MultiTokenMetadata>,
+		token_metadata: Option<SemiFungibleTokenMetadata>,
 	    ) {
 		let initial_storage_usage = env::storage_usage();
 		assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
@@ -241,8 +241,8 @@ impl MultiToken {
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
 			token_metadata_by_id.insert(
 				&tmp_token_id,
-				&MultiTokenMetadata {
-					spec: MULTI_METADATA_SPEC.to_string(),
+				&SemiFungibleTokenMetadata {
+					spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string(),
 					reference: None,
 					reference_hash: None,
 				},
@@ -397,9 +397,9 @@ impl MultiToken {
 }
 
 
-impl MultiTokenCore for MultiToken {
+impl SemiFungibleTokenCore for SemiFungibleToken {
 
-	fn multi_transfer(&mut self,
+	fn sft_transfer(&mut self,
 		receiver_id: ValidAccountId,
 		token_id: TokenId, 
 		amount: U128, 
@@ -411,7 +411,7 @@ impl MultiTokenCore for MultiToken {
 		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), approval_id, memo);
 	}
 
-	fn multi_transfer_call(&mut self,
+	fn sft_transfer_call(&mut self,
 		receiver_id: ValidAccountId,
 		token_id: TokenId,
 		amount: U128,
@@ -424,7 +424,7 @@ impl MultiTokenCore for MultiToken {
 		let (old_owner, old_approvals) =
 		    self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), approval_id, memo);
 		// Initiating receiver's call and the callback
-		ext_receiver::multi_on_transfer(
+		ext_receiver::sft_on_transfer(
 		    sender_id.clone(),
 		    vec![old_owner.clone()],
 		    vec![token_id.clone()],
@@ -434,7 +434,7 @@ impl MultiTokenCore for MultiToken {
 		    NO_DEPOSIT,
 		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
-		.then(ext_self::multi_resolve_transfer(
+		.then(ext_self::sft_resolve_transfer(
 		    vec![old_owner],
 		    receiver_id.into(),
 		    vec![token_id],
@@ -447,7 +447,7 @@ impl MultiTokenCore for MultiToken {
 		.into()
 	}
 
-	fn multi_batch_transfer(&mut self,
+	fn sft_batch_transfer(&mut self,
 		receiver_id: ValidAccountId,
 		token_ids:Vec<TokenId>,
 		amounts: Vec<U128>,
@@ -461,7 +461,7 @@ impl MultiTokenCore for MultiToken {
 
 	}
 
-	fn multi_batch_transfer_call(&mut self, 
+	fn sft_batch_transfer_call(&mut self, 
 		receiver_id: ValidAccountId, 
 		token_ids: Vec<TokenId>, 
 		amounts: Vec<U128>, 
@@ -478,7 +478,7 @@ impl MultiTokenCore for MultiToken {
 			old_approvals.push(old_approval.clone());
 		});
 		// TODO make this efficient
-		ext_receiver::multi_on_transfer(
+		ext_receiver::sft_on_transfer(
 		    sender_id.clone(),
 		    old_owners.clone(),
 		    token_ids.clone(),
@@ -488,7 +488,7 @@ impl MultiTokenCore for MultiToken {
 		    NO_DEPOSIT,
 		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
-		.then(ext_self::multi_resolve_transfer(
+		.then(ext_self::sft_resolve_transfer(
 		    old_owners,
 		    receiver_id.into(),
 		    token_ids,
