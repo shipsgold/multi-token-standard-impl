@@ -1,5 +1,5 @@
 [package]
-name = "multi_token"
+name = "semi_fungible_token"
 version = "0.0.1"
 authors = ["Ships Gold <zane@ships.gold>"]
 edition = "2018"
