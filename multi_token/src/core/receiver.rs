@@ -3,7 +3,7 @@ use crate::token::TokenId;
 use near_sdk::{AccountId, PromiseOrValue};
 /// Used when SemiFungibleTokens are transferred using `sft_transfer_call`. This trait is implemented on the receiving contract, not on the SemiFungibleToken contract.
 pub trait SemiFungibleTokenReceiver {
-    /// Take some action after receiving a multi-tokens token
+    /// Take some action after receiving a SemiFungibleToken-tokens token
     ///
     /// Requirements:
     /// * Contract MUST restrict calls to this function to a set of whitelisted SemiFungibleToken 

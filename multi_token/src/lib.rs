@@ -5,7 +5,7 @@ pub mod core;
 /// Metadata traits and implementation according to the [NFT enumeration standard](https://nomicon.io/Standards/NonFungibleToken/Metadata.html).
 /// This covers both the contract metadata and the individual token metadata.
 pub mod metadata;
-/// The Token struct for the multi token standard.
+/// The Token struct for the SemiFungibleToken token standard.
 mod token;
 // Utils for the contract
 mod utils; 

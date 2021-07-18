@@ -19,7 +19,7 @@ const NO_DEPOSIT: Balance = 0;
 
 
 #[ext_contract(ext_self)]
-trait MultiResolver {
+trait SemiFungibleTokenResolver {
 	fn sft_resolve_transfer(
 		&mut self,
 		previous_owner_ids: Vec<AccountId>,
@@ -31,7 +31,7 @@ trait MultiResolver {
 }
 
 #[ext_contract(ext_receiver)]
-pub trait MultiReceiver {
+pub trait SemiFungibleTokenReceiver {
 	/// Returns true if token should be returned to `sender_id`
 	fn sft_on_transfer(
 		&mut self,
@@ -44,7 +44,7 @@ pub trait MultiReceiver {
 }
 
 
-/// Implementation of multi-token standard.
+/// Implementation of SemiFungibleToken-token standard.
 /// There are next traits that any contract may implement:
 ///     - SemiFungibleTokenCore -- interface with sft_transfer/balance/supply methods. SemiFungibleToken provides methods for it.
 ///     - SemiFungibleTokenApproval -- interface with sft_approve methods. SemiFungibleToken provides methods for it.
