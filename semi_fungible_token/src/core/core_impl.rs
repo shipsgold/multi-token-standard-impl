@@ -79,7 +79,7 @@ pub struct SemiFungibleToken {
 }
 
 impl SemiFungibleToken {
-	pub fn new<Q, R, T, U>(
+	pub fn new<Q, R, T>(
 		owner_by_id_prefix: Q,
 		owner_id: ValidAccountId,
 		token_metadata_prefix: Option<R>,
