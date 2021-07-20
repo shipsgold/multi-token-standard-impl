@@ -26,6 +26,6 @@ pub trait SemiFungibleTokenReceiver {
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
         msg: String,
-    ) -> PromiseOrValue<bool>;
+    ) -> PromiseOrValue<Vec<U128>>;
 
 }

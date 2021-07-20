@@ -39,7 +39,7 @@ pub trait SemiFungibleTokenReceiver {
 		token_ids: Vec<TokenId>,
 		amounts: Vec<U128>,
 		msg: String,
-	) -> PromiseOrValue<bool>;
+	) -> PromiseOrValue<Vec<U128>>;
 }
 
 
@@ -414,7 +414,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		ft_token.get(&owner_id.into()).unwrap().into()
 	}
 
-    	fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>{
+	fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>{
 		token_ids.iter().map(|token_id|{
 			let ft_token = self.ft_owners_by_id.get(&token_id).expect("balance: token id not found");
 			ft_token.get(&owner_id.clone().into()).unwrap().into()
