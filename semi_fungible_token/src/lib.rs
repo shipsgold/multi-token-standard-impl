@@ -6,7 +6,9 @@ pub mod metadata;
 /// The Token struct for the SemiFungibleToken token standard.
 mod token;
 // Utils for the contract
-mod utils; 
+mod utils;
+mod macros;
+
 pub use self::token::{Token, TokenId, TokenType};
 
 /// NFT utility functions
