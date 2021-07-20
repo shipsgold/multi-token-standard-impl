@@ -78,15 +78,10 @@ macro_rules! impl_semi_fungible_token_core {
                 &mut self,
                 receiver_id: ValidAccountId,
                 token_ids: Vec<TokenId>
-                amount: Vec<U128>,
+                amounts: Vec<U128>,
             ) -> bool {
                 let sender_id: AccountId = sender_id.into();
-                let (used_amount, burned_amount) =
-                    self.$token.internal_ft_resolve_transfer(&sender_id, receiver_id, amount);
-                if burned_amount > 0 {
-                    $(self.$on_tokens_burned_fn(sender_id, burned_amount);)?
-                }
-                used_amount.into()
+                self.$token.sft_resolve_transfer(&sender_id, receiver_id, token_ids, amounts)
             }
         }
     };
