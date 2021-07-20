@@ -1,4 +1,5 @@
 use crate::core::SemiFungibleTokenCore;
+use crate::core::SemiFungibleTokenResolver;
 use crate::metadata::{SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
 use crate::utils::{refund_deposit};
@@ -7,7 +8,7 @@ use near_sdk::collections::{LookupMap, TreeMap};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{
 	assert_one_yocto, env, ext_contract, log, AccountId, Balance,
-	Gas, IntoStorageKey, PromiseOrValue, StorageUsage,
+	Gas, IntoStorageKey, PromiseOrValue, StorageUsage, PromiseResult
 };
 use std::collections::HashMap;
 
@@ -22,6 +23,7 @@ const NO_DEPOSIT: Balance = 0;
 trait SemiFungibleTokenResolver {
 	fn sft_resolve_transfer(
 		&mut self,
+		sender_id: AccountId,
 		receiver_id: AccountId,
 		token_ids: Vec<TokenId>,
 		amounts: Vec<U128>
@@ -353,6 +355,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
 		.then(ext_self::sft_resolve_transfer(
+				sender_id.into(),
 		    receiver_id.into(),
 		    vec![token_id],
 		    vec![amount.into()],
@@ -395,6 +398,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
 		.then(ext_self::sft_resolve_transfer(
+				sender_id.into(),
 		    receiver_id.into(),
 		    token_ids,
 		    amounts,
@@ -427,4 +431,69 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		}).collect()
 	}
 
+}
+
+impl SemiFungibleToken {
+
+	pub fn sft_internal_resolve_transfer(&mut self, sender_id: AccountId, receiver_id: AccountId, token_ids: Vec<TokenId>, amounts: Vec<U128>) -> Vec<U128> {
+		let returned_amounts: Vec<U128> = match env::promise_result(0) {
+				PromiseResult::NotReady => unreachable!(),
+				PromiseResult::Successful(value) => {
+						if let Ok(returned_amount) = near_sdk::serde_json::from_slice::<Vec<U128>>(&value) {
+								assert_eq!(returned_amount.len(), amounts.len(), "Amounts returned do not match length");
+								returned_amount.into()
+						} else {
+								amounts.into()
+						}
+					}
+				PromiseResult::Failed => amounts.into(),
+		};
+		returned_amounts.iter().enumerate().map(|(idx, returned_amount)|{
+			if returned_amount.clone().into() > 0 {
+				match self.token_type_index.get(&token_ids[idx]).expect("Token type does not exist") {
+					TokenType::FT => {
+						let unused_amount = std::cmp::min(amounts[idx].into(), returned_amount.clone().into());
+						let mut balances = self.ft_owners_by_id.get(&token_ids[idx])
+						.expect(format!("Token id: {} does not exist", token_ids[idx]));
+
+						let receiver_balance = balances.get(&receiver_id).unwrap_or(0);
+						if receiver_balance > 0 {
+							let refund_amount = std::cmp::min(receiver_balance, unused_amount);
+							balances.insert(&receiver_id, &(receiver_balance - refund_amount));
+							match balances.get(&sender_id) {
+								Some(sender_balance) => {
+									balances.insert(&sender_id, &(sender_balance + refund_amount));
+									log!("Refund {} from {} to {}", refund_amount, receiver_id, sender_id);
+									(amounts[idx].into() - refund_amount).into()
+								}
+								None => {
+									let supply = self.ft_token_supply_by_id.get(&token_ids[idx]).expect("Token has no supply");
+									self.ft_token_supply_by_id.insert(&token_ids[idx], &(supply - refund_amount));
+									log!("The account of the sender was deleted");
+									0.into()
+									}
+								}
+						}
+					} 
+					TokenType::NFT => {
+						if let Some(current_owner) = self.nft_owner_by_id.get(&token_ids[idx]) {
+							if current_owner != receiver_id {
+								return 0.into()
+							} else {
+								log!("Return token {} from @{} to @{}", token_ids[idx], &receiver_id, &sender_id);
+								self.internal_transfer_unguarded(&token_ids[idx], 1, &receiver_id, &sender_id);							
+								return 1.into();
+							}
+						}
+					}
+				}
+			}
+		}).collect()
+	}
+
+}
+impl SemiFungibleTokenResolver for SemiFungibleToken {
+ 	fn sft_resolve_transfer(&mut self, sender_id: AccountId, receiver_id: AccountId, token_ids: Vec<TokenId>, amounts: Vec<U128>) -> Vec<U128>{
+		self.sft_internal_resolve_transfer(sender_id, receiver_id, token_ids, amounts)
+	}
 }

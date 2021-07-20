@@ -33,8 +33,9 @@ pub trait SemiFungibleTokenResolver {
     /// Returns true if tokens were successfully transferred to `receiver_id`.
     fn sft_resolve_transfer(
         &mut self,
+        sender_id: AccountId,
         receiver_id: AccountId,
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>
-    ) -> bool;
+    ) -> Vec<U128>;
 }
