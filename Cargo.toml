@@ -1,5 +1,5 @@
 [package]
-name = "semi-fungible-token-standard"
+name = "semi-fungible-token-standards"
 version = "0.0.0"
 authors = ["Ships Gold zane@ships.gold"]
 edition = "2018"
@@ -10,7 +10,7 @@ near-sdk-sim = "3.2.0"
  
 
 # remember to include a line for each contract
-semi_fungible_token = { path = "./semi_fungible_token" }
+semi-fungible-token-standard = { path = "./semi_fungible_token" }
 
 [profile.release]
 codegen-units = 1
@@ -25,4 +25,8 @@ overflow-checks = true
 # remember to include a member for each contract
 members = [
   "semi_fungible_token",
+]
+
+exclude = [
+  "examples/semi-fungible-token",
 ]
