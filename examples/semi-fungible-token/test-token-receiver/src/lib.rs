@@ -1,14 +1,13 @@
 /*!
 A stub contract that implements sft_on_transfer for simulation testing sft_transfer_call.
 */
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::json_types::U128;
+use near_sdk::{
+    env, ext_contract, log, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, PromiseOrValue,
+};
 use semi_fungible_token_standard::core::SemiFungibleTokenReceiver;
 use semi_fungible_token_standard::TokenId;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::{U128};
-use near_sdk::{
-    env, ext_contract, log, near_bindgen, AccountId, Balance, Gas, PanicOnDefault,
-    PromiseOrValue,
-};
 
 const BASE_GAS: u64 = 5_000_000_000_000;
 const PROMISE_CALL: u64 = 5_000_000_000_000;
@@ -41,8 +40,6 @@ impl TokenReceiver {
     }
 }
 
-
-
 #[near_bindgen]
 impl SemiFungibleTokenReceiver for TokenReceiver {
     /// Returns true if token should be returned to `sender_id`
@@ -52,19 +49,18 @@ impl SemiFungibleTokenReceiver for TokenReceiver {
     /// * "return-it-later" - make cross-contract call which resolves with `true`
     /// * "keep-it-later" - make cross-contract call which resolves with `false`
     /// Otherwise panics, which should also return token to `sender_id`
-    /// 
+    ///
     fn sft_on_transfer(
         &mut self,
         sender_id: AccountId,
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
         msg: String,
-    ) -> PromiseOrValue<Vec<U128>>
-    {
+    ) -> PromiseOrValue<Vec<U128>> {
         PromiseOrValue::Value(amounts)
     }
-        // Verifying that we were called by non-fungible token contract that we expect.
-        /*
+    // Verifying that we were called by non-fungible token contract that we expect.
+    /*
         assert_eq!(
             &env::predecessor_account_id(),
             &self.semi_fungible_token_account_id,

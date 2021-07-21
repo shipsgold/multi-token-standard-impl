@@ -1,6 +1,6 @@
 /// The core methods for a basic semi fungible token. Extension standards may be
 /// added in addition to this macro.
-/// 
+///
 
 #[macro_export]
 macro_rules! impl_semi_fungible_token_core {
@@ -14,7 +14,7 @@ macro_rules! impl_semi_fungible_token_core {
             #[payable]
             fn sft_transfer(
                 &mut self,
-                receiver_id: ValidAccountId,
+                receiver_id: AccountId,
                 token_id: TokenId,
                 amount: U128,
                 memo: Option<String>,
@@ -22,11 +22,10 @@ macro_rules! impl_semi_fungible_token_core {
                 self.$token.sft_transfer(receiver_id, token_id, amount, memo)
             }
 
-        
             #[payable]
             fn sft_transfer_call(
                 &mut self,
-                receiver_id: ValidAccountId,
+                receiver_id: AccountId,
                 token_id: TokenId,
                 amount: U128,
                 memo: Option<String>,
@@ -35,33 +34,33 @@ macro_rules! impl_semi_fungible_token_core {
                 self.$token.sft_transfer_call(receiver_id, token_id, amount, memo, msg)
             }
 
-            fn sft_batch_transfer(&mut self,
-              receiver_id: ValidAccountId,
-              token_id: Vec<TokenId>,
-              amounts: Vec<U128>,
-              memo: Option<String>,
+            fn sft_batch_transfer(
+                &mut self,
+                receiver_id: AccountId,
+                token_id: Vec<TokenId>,
+                amounts: Vec<U128>,
+                memo: Option<String>,
             ) {
-              self.$token.sft_batch_transfer(receiver_id,token_id,amounts, memo)
+                self.$token.sft_batch_transfer(receiver_id, token_id, amounts, memo)
             }
 
-            
             fn sft_batch_transfer_call(
                 &mut self,
-                receiver_id: ValidAccountId,
+                receiver_id: AccountId,
                 token_ids: Vec<TokenId>,
                 amounts: Vec<U128>,
                 memo: Option<String>,
                 msg: String,
             ) -> PromiseOrValue<Vec<U128>> {
-              self.$token.sft_batch_transfer_call(receiver_id,token_ids, amounts, memo, msg)
+                self.$token.sft_batch_transfer_call(receiver_id, token_ids, amounts, memo, msg)
             }
 
-            fn balance_of(&self, owner_id: ValidAccountId, token_id: TokenId)-> U128 {
-              self.$token.balance_of(owner_id,token_id)
+            fn balance_of(&self, owner_id: AccountId, token_id: TokenId) -> U128 {
+                self.$token.balance_of(owner_id, token_id)
             }
-    
-            fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128> {
-              self.$token.balance_of_batch(owner_id,token_ids)
+
+            fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<u128> {
+                self.$token.balance_of_batch(owner_id, token_ids)
             }
 
             fn total_supply(&self, token_id: TokenId) -> U128 {
@@ -71,9 +70,7 @@ macro_rules! impl_semi_fungible_token_core {
             fn total_supply_batch(&self, token_ids: Vec<TokenId>) -> Vec<U128> {
                 self.$token.total_supply_batch(token_ids)
             }
-
         }
-        
         #[near_bindgen]
         impl SemiFungibleTokenResolver for $contract {
             #[private]
@@ -89,4 +86,3 @@ macro_rules! impl_semi_fungible_token_core {
         }
     };
 }
-

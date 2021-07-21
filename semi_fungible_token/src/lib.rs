@@ -6,9 +6,9 @@ pub mod metadata;
 /// The Token struct for the SemiFungibleToken token standard.
 mod token;
 // Utils for the contract
-mod utils;
 mod macros;
+mod utils;
 
+pub use self::core::SemiFungibleToken;
 pub use self::token::{Token, TokenId, TokenType};
 pub use macros::*;
-pub use self::core::SemiFungibleToken;

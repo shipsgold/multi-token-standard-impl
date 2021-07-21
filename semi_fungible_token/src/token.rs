@@ -10,8 +10,8 @@ pub type TokenId = String;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, BorshDeserialize, BorshSerialize)]
 #[serde(crate = "near_sdk::serde")]
 pub enum TokenType {
-	FT,
-	NFT
+	Ft,
+	Nft
 }
 
 /// In this implementation, the Token struct takes two extensions standards (metadata and approval) as optional fields, as they are frequently used in modern NFTs.

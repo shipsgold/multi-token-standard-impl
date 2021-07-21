@@ -19,12 +19,9 @@ pub const TOKEN_ID: &str = "0";
 /// * nft: the NFT contract, callable with `call!` and `view!`
 /// * alice: a user account, does not yet own any tokens
 /// * token_receiver: a contract implementing `nft_on_transfer` for use with `transfer_and_call`
-pub fn init() -> (
-    UserAccount,
-    ContractAccount<SftContract>,
-    UserAccount,
-    ContractAccount<TokenReceiverContract>
-) {
+pub fn init(
+) -> (UserAccount, ContractAccount<SftContract>, UserAccount, ContractAccount<TokenReceiverContract>)
+{
     let root = init_simulator(None);
     // uses default values for deposit and gas
     let sft = deploy!(
@@ -78,8 +75,6 @@ pub fn init() -> (
         ),
         deposit = 7000000000000000000000
     );*/
-
-
 }
 
 pub fn helper_mint(
@@ -89,5 +84,4 @@ pub fn helper_mint(
     title: String,
     desc: String,
 ) {
-
 }

@@ -13,13 +13,13 @@ NOTES:
   - To prevent the deployed contract from being modified or deleted, it should not have any access
     keys on its account.
 */
-use semi_fungible_token_standard::{SemiFungibleToken};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LazyOption;
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{
   env, log, near_bindgen, AccountId, Balance, BorshStorageKey, PanicOnDefault, PromiseOrValue,
 };
+use semi_fungible_token_standard::SemiFungibleToken;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -34,21 +34,19 @@ enum StorageKey {
   SemiFungibleTokenSupply,
 }
 
-
 #[near_bindgen]
 impl Contract {
   #[init]
-  pub fn new(owner_id: ValidAccountId)->Self{
+  pub fn new(owner_id: ValidAccountId) -> Self {
     assert!(!env::state_exists(), "Already initialized");
     Self {
-      token: SemiFungibleToken::new(StorageKey::SemiFungibleTokenOwner,
+      token: SemiFungibleToken::new(
+        StorageKey::SemiFungibleTokenOwner,
         owner_id,
         Some(StorageKey::SemiFungibleTokenMetadata),
-        StorageKey::SemiFungibleTokenSupply)
+        StorageKey::SemiFungibleTokenSupply,
+      ),
     }
   }
-
 }
 semi_fungible_token_standard::impl_semi_fungible_token_core!(Contract, token);
-
-

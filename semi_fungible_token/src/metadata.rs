@@ -47,6 +47,6 @@ impl SemiFungibleTokenMetadata {
     }
 
     pub fn metadata_uri(&self, token_id: TokenId) -> Option<String>{
-        self.reference.as_ref().and_then(|rf| Some(rf.replace("{id}", &token_id)))
+        self.reference.as_ref().map(|rf| rf.replace("{id}", &token_id))
     }
 }
