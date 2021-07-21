@@ -1,4 +1,5 @@
 use crate::core::SemiFungibleTokenCore;
+use crate::core::SemiFungibleTokenResolver;
 use crate::metadata::{SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
 use crate::utils::{refund_deposit};
@@ -7,7 +8,7 @@ use near_sdk::collections::{LookupMap, TreeMap};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{
 	assert_one_yocto, env, ext_contract, log, AccountId, Balance,
-	Gas, IntoStorageKey, PromiseOrValue, StorageUsage,
+	Gas, IntoStorageKey, PromiseOrValue, StorageUsage, PromiseResult
 };
 use std::collections::HashMap;
 
@@ -22,11 +23,10 @@ const NO_DEPOSIT: Balance = 0;
 trait SemiFungibleTokenResolver {
 	fn sft_resolve_transfer(
 		&mut self,
-		previous_owner_ids: Vec<AccountId>,
+		sender_id: AccountId,
 		receiver_id: AccountId,
 		token_ids: Vec<TokenId>,
-		amounts: Vec<U128>,
-		approved_account_ids: Vec<Option<HashMap<AccountId, u64>>>,
+		amounts: Vec<U128>
 	) -> bool;
 }
 
@@ -36,11 +36,10 @@ pub trait SemiFungibleTokenReceiver {
 	fn sft_on_transfer(
 		&mut self,
 		sender_id: AccountId,
-		previous_owner_ids: Vec<AccountId>,
 		token_ids: Vec<TokenId>,
 		amounts: Vec<U128>,
 		msg: String,
-	) -> PromiseOrValue<bool>;
+	) -> PromiseOrValue<Vec<U128>>;
 }
 
 
@@ -79,37 +78,20 @@ pub struct SemiFungibleToken {
 
 	// required by metadata extension
 	pub token_metadata_by_id: Option<LookupMap<TokenId, SemiFungibleTokenMetadata>>,
-
-	// required by approval extension
-	pub approvals_by_id: Option<LookupMap<TokenId, HashMap<AccountId, u64>>>,
-	pub next_approval_id_by_id: Option<LookupMap<TokenId, u64>>,
 }
 
 impl SemiFungibleToken {
-	pub fn new<Q, R, S, T, U>(
+	pub fn new<Q, R, T>(
 		owner_by_id_prefix: Q,
 		owner_id: ValidAccountId,
 		token_metadata_prefix: Option<R>,
-		approval_prefix: Option<T>,
-		supply_by_id_prefix: U
+		supply_by_id_prefix: T
 	) -> Self
 	where
 		Q: IntoStorageKey,
 		R: IntoStorageKey,
 		T: IntoStorageKey,
-		U: IntoStorageKey
 	{
-		let (approvals_by_id, next_approval_id_by_id) =
-			if let Some(prefix) = approval_prefix {
-				let prefix: Vec<u8> = prefix.into_storage_key();
-				(
-					Some(LookupMap::new(prefix.clone())),
-					Some(LookupMap::new([prefix, "n".into()].concat())),
-				)
-			} else {
-				(None, None)
-			};
-
 		let owner_prefix: Vec<u8> = owner_by_id_prefix.into_storage_key();
 		let token_type_prefix = [owner_prefix.clone(), "t".into()].concat();
 		
@@ -125,8 +107,6 @@ impl SemiFungibleToken {
 			ft_prefix_index: 0,
 			ft_token_supply_by_id: LookupMap::new(supply_by_id_prefix.into_storage_key()),
 			token_metadata_by_id: token_metadata_prefix.map(LookupMap::new),
-			approvals_by_id,
-			next_approval_id_by_id,
 		};
 		this.measure_min_ft_token_storage_cost();
 		this.measure_min_nft_token_storage_cost();
@@ -249,28 +229,14 @@ impl SemiFungibleToken {
 			);
 		}
 
-		if let Some(approvals_by_id) = &mut self.approvals_by_id {
-			let mut approvals = HashMap::new();
-			approvals.insert(tmp_owner_id.clone(), 1u64);
-			approvals_by_id.insert(&tmp_token_id, &approvals);
-		}
-		if let Some(next_approval_id_by_id) = &mut self.next_approval_id_by_id {
-			next_approval_id_by_id.insert(&tmp_token_id, &1u64);
-		}
-
 		// 2. see how much space it took
 		self.extra_storage_in_bytes_per_nft_token =
 			env::storage_usage() - initial_storage_usage;
-		// 3. roll it all back
-		if let Some(next_approval_id_by_id) = &mut self.next_approval_id_by_id {
-			next_approval_id_by_id.remove(&tmp_token_id);
-		}
-		if let Some(approvals_by_id) = &mut self.approvals_by_id {
-			approvals_by_id.remove(&tmp_token_id);
-		}
+
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
 			token_metadata_by_id.remove(&tmp_token_id);
 		}
+
 		self.nft_owner_by_id.remove(&tmp_token_id);
 	}
 
@@ -294,42 +260,6 @@ impl SemiFungibleToken {
 	};
 	}
 
-	//TODO Rename functionality as it mutates the approvals 
-	fn verify_update_nft_transferable(&mut self, token_id: &TokenId, sender_id: &AccountId, owner_id: &AccountId, approval_id: Option<u64>) -> (AccountId, Option<HashMap<AccountId, u64>>){
-	// clear approvals, if using Approval Management extension
-	// this will be rolled back by a panic if sending fails
-
-	// TODO should not mutate approvals or 
-	let approved_account_ids = self.approvals_by_id.as_mut().and_then(|by_id| by_id.remove(&token_id));
-		// check if authorized
-	if sender_id != owner_id {
-		// if approval extension is NOT being used, or if token has no approved accounts
-		if approved_account_ids.is_none() {
-			env::panic(b"Unauthorized")
-		}
-
-		// Approval extension is being used; get approval_id for sender.
-		let actual_approval_id = approved_account_ids.as_ref().unwrap().get(sender_id);
-
-		// Panic if sender not approved at all
-		if actual_approval_id.is_none() {
-			env::panic(b"Sender not approved");
-		}
-
-		// If approval_id included, check that it matches
-		if let Some(enforced_approval_id) = approval_id {
-			let actual_approval_id = actual_approval_id.unwrap();
-			assert_eq!(
-			actual_approval_id, &enforced_approval_id,
-			"The actual approval_id {} is different from the given approval_id {}",
-			actual_approval_id, enforced_approval_id,
-			);
-		}
-	}
-	(owner_id.into(), approved_account_ids)
-
-	}
-
 	fn verify_ft_transferable(&self, token_id: &TokenId, sender_id: &AccountId, receiver_id: &AccountId){
 	if sender_id == receiver_id {
 		panic!("Sender and receiver cannot be the same")
@@ -347,17 +277,15 @@ impl SemiFungibleToken {
 	receiver_id: &AccountId,
 	token_id: &TokenId,
 	amount: u128,
-	approval_id: Option<u64>,
 	memo: Option<String>,
-	) -> (AccountId, Option<HashMap<AccountId, u64>>) {
+	){
 	let token_type = self.token_type_index.get(token_id).expect("Token not found");
 	let mut owner_id = sender_id.clone();
-	let owner_and_approval;
 	match token_type {
 		TokenType::NFT => {
 			owner_id = self.nft_owner_by_id.get(token_id).unwrap(); 
 			assert_ne!(&owner_id, receiver_id, "Current and next owner must differ");
-			owner_and_approval = self.verify_update_nft_transferable(token_id, sender_id, &owner_id, approval_id);
+			assert_eq!(&owner_id, sender_id, "Unauthorized sender must be owner");
 			let balance = self.ft_owners_by_id.get(token_id).and_then(|by_id| by_id.get(&sender_id)).unwrap();
 			if balance < amount {
 				panic!("Amount exceeds balance");
@@ -365,17 +293,14 @@ impl SemiFungibleToken {
 		},
 		TokenType::FT => {
 			self.verify_ft_transferable(token_id, sender_id, receiver_id);
-			owner_and_approval = (owner_id.clone(), None)
 		}
 	}	
-	self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
+		self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
 
-	log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
-	if let Some(memo) = memo {
-		log!("Memo: {}", memo);
-	}
-	owner_and_approval
-	// return previous owner & approvals
+		log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
+		if let Some(memo) = memo {
+			log!("Memo: {}", memo);
+		}
 	}
 
 	pub fn internal_transfer_batch(&mut self,
@@ -383,14 +308,13 @@ impl SemiFungibleToken {
 	receiver_id: &AccountId,
 	token_ids: &Vec<TokenId>,
 	amounts: &Vec<U128>,
-	memo: Option<String>,
-	approval_id: Option<u64>) ->Vec<(AccountId, Option<HashMap<AccountId, u64>>)>{
+	memo: Option<String>){
 	if token_ids.len() != amounts.len(){
 		panic!("Number of token ids and amounts must be equal")
 	}
 	token_ids.iter().enumerate().map(|(idx, token_id)| {
-		self.internal_transfer(&sender_id, &receiver_id.into(), &token_id, amounts[idx].into(), approval_id, memo.clone())
-	}).collect()
+			self.internal_transfer(&sender_id, &receiver_id.into(), &token_id, amounts[idx].into(), memo.clone())
+	});
 	}
 
 
@@ -403,30 +327,26 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		receiver_id: ValidAccountId,
 		token_id: TokenId, 
 		amount: U128, 
-		approval_id: Option<u64>, 
 		memo: Option<String>) {
 
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), approval_id, memo);
+		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), memo);
 	}
 
 	fn sft_transfer_call(&mut self,
 		receiver_id: ValidAccountId,
 		token_id: TokenId,
 		amount: U128,
-		approval_id: Option<u64>,
 		memo: Option<String>,
 		msg: String,
-	) ->PromiseOrValue<bool> {
+	) ->PromiseOrValue<U128> {
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		let (old_owner, old_approvals) =
-		    self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), approval_id, memo);
+		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), memo);
 		// Initiating receiver's call and the callback
 		ext_receiver::sft_on_transfer(
 		    sender_id.clone(),
-		    vec![old_owner.clone()],
 		    vec![token_id.clone()],
 		    vec![amount],
 		    msg,
@@ -435,11 +355,10 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
 		.then(ext_self::sft_resolve_transfer(
-		    vec![old_owner],
+				sender_id.into(),
 		    receiver_id.into(),
 		    vec![token_id],
 		    vec![amount.into()],
-		    vec![old_approvals],
 		    &env::current_account_id(),
 		    NO_DEPOSIT,
 		    GAS_FOR_RESOLVE_TRANSFER,
@@ -451,13 +370,11 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		receiver_id: ValidAccountId,
 		token_ids:Vec<TokenId>,
 		amounts: Vec<U128>,
-		approval_id: Option<u64>,
 		memo: Option<String>,
-		msg: String,
 	){
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo, approval_id);
+		self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo);
 
 	}
 
@@ -465,22 +382,14 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		receiver_id: ValidAccountId, 
 		token_ids: Vec<TokenId>, 
 		amounts: Vec<U128>, 
-		approval_id: Option<u64>, 
 		memo: Option<String>, 
-		msg: String)->PromiseOrValue<bool>{
+		msg: String)->PromiseOrValue<Vec<U128>>{
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
-		let prev_state= self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo, approval_id);
-		let mut old_owners:Vec<AccountId> = Vec::new();
-		let mut old_approvals: Vec<Option<HashMap<AccountId, u64>>> = Vec::new();
-		prev_state.iter().for_each(|(old_owner_id, old_approval)| {
-			old_owners.push(old_owner_id.to_string());
-			old_approvals.push(old_approval.clone());
-		});
+		self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo);
 		// TODO make this efficient
 		ext_receiver::sft_on_transfer(
 		    sender_id.clone(),
-		    old_owners.clone(),
 		    token_ids.clone(),
 		    amounts.clone().into(),
 		    msg,
@@ -489,11 +398,10 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		    env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
 		.then(ext_self::sft_resolve_transfer(
-		    old_owners,
+				sender_id.into(),
 		    receiver_id.into(),
 		    token_ids,
 		    amounts,
-		    old_approvals,
 		    &env::current_account_id(),
 		    NO_DEPOSIT,
 		    GAS_FOR_RESOLVE_TRANSFER,
@@ -506,7 +414,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		ft_token.get(&owner_id.into()).unwrap().into()
 	}
 
-    	fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>{
+	fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>{
 		token_ids.iter().map(|token_id|{
 			let ft_token = self.ft_owners_by_id.get(&token_id).expect("balance: token id not found");
 			ft_token.get(&owner_id.clone().into()).unwrap().into()
@@ -523,4 +431,73 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		}).collect()
 	}
 
+}
+
+impl SemiFungibleToken {
+
+	pub fn sft_internal_resolve_transfer(&mut self, sender_id: AccountId, receiver_id: AccountId, token_ids: Vec<TokenId>, amounts: Vec<U128>) -> Vec<U128> {
+		let returned_amounts: Vec<U128> = match env::promise_result(0) {
+				PromiseResult::NotReady => unreachable!(),
+				PromiseResult::Successful(value) => {
+						if let Ok(returned_amount) = near_sdk::serde_json::from_slice::<Vec<U128>>(&value) {
+								assert_eq!(returned_amount.len(), amounts.len(), "Amounts returned do not match length");
+								returned_amount.into()
+						} else {
+								amounts.clone().into()
+						}
+					}
+				PromiseResult::Failed => amounts.clone().into(),
+		};
+		returned_amounts.iter().enumerate().map(|(idx, returned_amount)|{
+			let ret_amt:u128 = returned_amount.clone().into();
+			if  ret_amt <= 0 {
+				return U128::from(0);
+			}
+			match self.token_type_index.get(&token_ids[idx]).expect("Token type does not exist") {
+					TokenType::FT => {
+						let unused_amount = std::cmp::min(amounts[idx].into(), returned_amount.clone().into());
+						let mut balances = self.ft_owners_by_id.get(&token_ids[idx]).expect(&format!("Token id {} does not exist",&token_ids[idx]));
+						let receiver_balance = balances.get(&receiver_id).expect("Token receiver no longer exists");
+						if receiver_balance > 0 {
+							let refund_amount:u128 = std::cmp::min(receiver_balance, unused_amount);
+							balances.insert(&receiver_id, &(receiver_balance - refund_amount));
+							return match balances.get(&sender_id) {
+								Some(sender_balance) => {
+									balances.insert(&sender_id, &(sender_balance + refund_amount));
+									log!("Refund {} from {} to {}", refund_amount, receiver_id, sender_id);
+									let amount:u128 = amounts[idx].into();
+									U128::from(amount - refund_amount)
+								}
+								None => {
+									let supply = self.ft_token_supply_by_id.get(&token_ids[idx]).expect("Token has no supply");
+									self.ft_token_supply_by_id.insert(&token_ids[idx], &(supply - refund_amount));
+									log!("The account of the sender was deleted");
+									U128::from(0)
+									}
+								}
+						}else {
+							return U128::from(0)
+						}
+					}
+					TokenType::NFT => {
+						if let Some(current_owner) = self.nft_owner_by_id.get(&token_ids[idx]) {
+							if current_owner != receiver_id {
+								return U128::from(0) // .into()
+							} else {
+								log!("Return token {} from @{} to @{}", token_ids[idx], &receiver_id, &sender_id);
+								self.internal_transfer_unguarded(&token_ids[idx], 1, &receiver_id, &sender_id);							
+								return U128::from(1)
+							}
+						}
+						U128::from(0)
+
+					}
+				}
+			}).collect()
+	}
+}
+impl SemiFungibleTokenResolver for SemiFungibleToken {
+ 	fn sft_resolve_transfer(&mut self, sender_id: AccountId, receiver_id: AccountId, token_ids: Vec<TokenId>, amounts: Vec<U128>) -> Vec<U128>{
+		self.sft_internal_resolve_transfer(sender_id, receiver_id, token_ids, amounts)
+	}
 }
