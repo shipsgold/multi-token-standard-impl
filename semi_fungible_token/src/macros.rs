@@ -55,17 +55,6 @@ macro_rules! impl_semi_fungible_token_core {
                 self.$token.sft_batch_transfer_call(receiver_id, token_ids, amounts, memo, msg)
             }
 
-            fn mint(
-                &mut self,
-                token_id: TokenId,
-                token_type: TokenType,
-                amount: Option<U128>,
-                token_owner_id: ValidAccountId,
-                token_metadata: Option<SemiFungibleTokenMetadata>,
-            ) {
-                self.$token.mint(token_id, token_type, amount, token_owner_id, token_metadata)
-            }
-
             fn balance_of(&self, owner_id: AccountId, token_id: TokenId) -> U128 {
                 self.$token.balance_of(owner_id, token_id)
             }
@@ -97,7 +86,6 @@ macro_rules! impl_semi_fungible_token_core {
         }
     };
 }
-
 
 #[macro_export]
 macro_rules! impl_semi_fungible_token_minter {
