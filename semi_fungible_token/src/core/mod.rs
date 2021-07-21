@@ -9,18 +9,15 @@ pub use self::resolver::*;
 
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{PromiseOrValue};
-use crate::token::{TokenId, Token};
+use crate::token::{TokenId};
 
-pub trait MultiTokenCore {
+pub trait SemiFungibleTokenCore {
     /// Basic token transfer. Transfer a token or tokens given a token_id. The token id can correspond to  
     /// either a NonFungibleToken or Fungible Token this is differeniated by the implementation.
     /// 
     /// Requirements
     /// * Caller of the method must attach a deposit of 1 yoctoⓃ for security purposes
     /// * Contract MUST panic if called by someone other than token owner or,
-    ///   if using Approval Management, one of the approved accounts
-    /// * `approval_id` is for use with Approval Management,
-    ///   see https://nomicon.io/Standards/NonFungibleToken/ApprovalManagement.html
     /// * If using Approval Management, contract MUST nullify approved accounts on
     ///   successful transfer.
     /// * TODO: needed? Both accounts must be registered with the contract for transfer to
@@ -30,22 +27,18 @@ pub trait MultiTokenCore {
     /// * `receiver_id`: the valid NEAR account receiving the token
     /// * `token_id`: the token or tokens to transfer
     /// * `amount`: the token amount of tokens to transfer for token_id 
-    /// * `approval_id`: expected approval ID. A number smaller than
-    ///    2^53, and therefore representable as JSON. See Approval Management
-    ///    standard for full explanation.
     /// * `memo` (optional): for use cases that may benefit from indexing or
     ///    providing information for a transfer
-    fn multi_transfer(&mut self,
+    fn sft_transfer(&mut self,
         receiver_id: ValidAccountId,
         token_id: TokenId,
         amount: U128,
-        approval_id: Option<u64>,
         memo: Option<String>
     );
 
     /// Transfer token/s and call a method on a receiver contract. A successful
-    /// workflow will end in a success execution outcome to the callback on the MultiToken
-    /// contract at the method `multi_resolve_transfer`.
+    /// workflow will end in a success execution outcome to the callback on the SemiFungibleToken
+    /// contract at the method `sft_resolve_transfer`.
     ///
     /// You can think of this as being similar to attaching  tokens to a
     /// function call. It allows you to attach any Fungible or Non Fungible Token in a call to a
@@ -56,36 +49,28 @@ pub trait MultiTokenCore {
     ///   purposes
     /// * Contract MUST panic if called by someone other than token owner or,
     ///   if using Approval Management, one of the approved accounts
-    /// * The receiving contract must implement `multi_on_transfer` according to the
-    ///   standard. If it does not, MultiToken contract's `multi_resolve_transfer` MUST deal
+    /// * The receiving contract must implement `sft_on_transfer` according to the
+    ///   standard. If it does not, SemiFungibleToken contract's `sft_resolve_transfer` MUST deal
     ///   with the resulting failed cross-contract call and roll back the transfer.
-    /// * Contract MUST implement the behavior described in `multi_resolve_transfer`
-    /// * `approval_id` is for use with Approval Management extension, see
-    ///   that document for full explanation.
-    /// * If using Approval Management, contract MUST nullify approved accounts on
-    ///   successful transfer.
+    /// * Contract MUST implement the behavior described in `sft_resolve_transfer`
     ///
     /// Arguments:
     /// * `receiver_id`: the valid NEAR account receiving the token.
     /// * `token_id`: the token to send.
     /// * `amount`: amount of tokens to transfer for token_id
-    /// * `approval_id`: expected approval ID. A number smaller than
-    ///    2^53, and therefore representable as JSON. See Approval Management
-    ///    standard for full explanation.
     /// * `memo` (optional): for use cases that may benefit from indexing or
     ///    providing information for a transfer.
     /// * `msg`: specifies information needed by the receiving contract in
     ///    order to properly handle the transfer. Can indicate both a function to
     ///    call and the parameters to pass to that function.
-    fn multi_transfer_call(
+    fn sft_transfer_call(
         &mut self,
         receiver_id: ValidAccountId,
         token_id: TokenId,
         amount: U128,
-        approval_id: Option<u64>,
         memo: Option<String>,
         msg: String,
-    ) -> PromiseOrValue<bool>;
+    ) -> PromiseOrValue<U128>;
 
     /// Batch token transfer. Transfer a tokens given token_ids and amounts. The token ids can correspond to  
     /// either Non-Fungible Tokens or Fungible Tokens or some combination of the two. The token ids 
@@ -114,17 +99,15 @@ pub trait MultiTokenCore {
     /// * `memo` (optional): for use cases that may benefit from indexing or
     ///    providing information for a transfer
 
-    fn multi_batch_transfer(&mut self,
+    fn sft_batch_transfer(&mut self,
         receiver_id: ValidAccountId,
         token_id: Vec<TokenId>,
         amounts: Vec<U128>,
-        approval_ids: Option<u64>,
         memo: Option<String>,
-        msg: String,       
     );
     /// Batch transfer token/s and call a method on a receiver contract. A successful
-    /// workflow will end in a success execution outcome to the callback on the MultiToken
-    /// contract at the method `multi_resolve_batch_transfer`.
+    /// workflow will end in a success execution outcome to the callback on the SemiFungibleToken
+    /// contract at the method `sft_resolve_batch_transfer`.
     ///
     /// You can think of this as being similar to attaching  tokens to a
     /// function call. It allows you to attach any Fungible or Non Fungible Token in a call to a
@@ -135,10 +118,10 @@ pub trait MultiTokenCore {
     ///   purposes
     /// * Contract MUST panic if called by someone other than token owner or,
     ///   if using Approval Management, one of the approved accounts
-    /// * The receiving contract must implement `multi_on_transfer` according to the
-    ///   standard. If it does not, MultiToken contract's `multi_resolve_batch_transfer` MUST deal
+    /// * The receiving contract must implement `sft_on_transfer` according to the
+    ///   standard. If it does not, SemiFungibleToken contract's `sft_resolve_batch_transfer` MUST deal
     ///   with the resulting failed cross-contract call and roll back the transfer.
-    /// * Contract MUST implement the behavior described in `multi_resolve_batch_transfer`
+    /// * Contract MUST implement the behavior described in `sft_resolve_batch_transfer`
     /// * `approval_id` is for use with Approval Management extension, see
     ///   that document for full explanation.
     /// * If using Approval Management, contract MUST nullify approved accounts on
@@ -157,17 +140,14 @@ pub trait MultiTokenCore {
     ///    order to properly handle the transfer. Can indicate both a function to
     ///    call and the parameters to pass to that function.
 
-    fn multi_batch_transfer_call(
+    fn sft_batch_transfer_call(
         &mut self,
         receiver_id: ValidAccountId,
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
-        approval_ids: Option<u64>,
         memo: Option<String>,
         msg: String,
-    ) -> PromiseOrValue<bool>;
-
-    fn multi_token(self, token_id: TokenId)-> Option<Token>;
+    ) -> PromiseOrValue<Vec<U128>>;
 
     /// Get the balance of an an account given token_id. For fungible token returns back amount, for 
     /// non fungible token it returns back constant 1.
@@ -176,12 +156,12 @@ pub trait MultiTokenCore {
     /// Get the balances of an an account given token_ids. For fungible token returns back amount, for 
     /// non fungible token it returns back constant 1. returns vector of balances corresponding to token_ids 
     /// in a 1-1 mapping
-    //fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>;
+    fn balance_of_batch(&self, owner_id: ValidAccountId, token_ids: Vec<TokenId>) -> Vec<u128>;
 
     /// Returns the total supply of the token in a decimal string representation given token_id.
     fn total_supply(&self, token_id: TokenId)->U128;
 
     // Returns the total supplies of the tokens given by token_ids in a decimal string representation.
-    //  fn total_supply_batch(&self, token_ids: Vec<TokenId>) -> Vec<u128>;
+    fn total_supply_batch(&self, token_ids: Vec<TokenId>) -> Vec<U128>;
 }
 
