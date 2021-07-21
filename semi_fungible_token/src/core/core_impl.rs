@@ -358,16 +358,26 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 	}
 
 	fn balance_of(&self, owner_id: AccountId, token_id: TokenId) -> U128 {
-		let ft_token = self.ft_owners_by_id.get(&token_id).expect("balance: token id not found");
-		ft_token.get(&owner_id).unwrap().into()
+		match self.token_type_index.get(&token_id).expect("Token type does not exist") {
+			TokenType::Ft => {
+				let ft_token = self.ft_owners_by_id.get(&token_id).expect("balance: token id not found");
+				ft_token.get(&owner_id).unwrap_or(0).into()
+			}
+			TokenType::Nft => {
+				let owner = self.nft_owner_by_id.get(&token_id).expect("Token does not exist");
+				if owner == owner_id {
+					return 1.into();
+				}
+				0.into()
+			}
+		}
 	}
 
-	fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<u128> {
+	fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<U128> {
 		token_ids
 			.iter()
 			.map(|token_id| {
-				let ft_token = self.ft_owners_by_id.get(&token_id).expect("balance: token id not found");
-				ft_token.get(&owner_id).unwrap()
+				self.balance_of(owner_id.clone(), token_id.clone())
 			})
 			.collect()
 	}

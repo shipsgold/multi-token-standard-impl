@@ -160,7 +160,7 @@ pub trait SemiFungibleTokenCore {
     /// Get the balances of an an account given token_ids. For fungible token returns back amount, for
     /// non fungible token it returns back constant 1. returns vector of balances corresponding to token_ids
     /// in a 1-1 mapping
-    fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<u128>;
+    fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<U128>;
 
     /// Returns the total supply of the token in a decimal string representation given token_id.
     fn total_supply(&self, token_id: TokenId) -> U128;
