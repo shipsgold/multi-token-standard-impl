@@ -1,7 +1,8 @@
-use semi_fungible_token::ContractContract as SftContract;
-use token_receiver::TokenReceiverContract;
-
+use near_sdk::AccountId;
 use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount};
+use semi_fungible_token::ContractContract as SftContract;
+use semi_fungible_token_standard::TokenId;
+use token_receiver::TokenReceiverContract;
 
 // Load in contract bytes at runtime
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
@@ -9,7 +10,7 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     TOKEN_RECEIVER_WASM_BYTES => "res/token_receiver.wasm",
 }
 
-pub const SFT_ID: &str = "0";
+pub const SFT_ID: &str = "sft";
 const TOKEN_RECEIVER_ID: &str = "token-receiver";
 // TODO: how to export String instead of &str? Way too much `into`/`to_string` with &str.
 pub const TOKEN_ID: &str = "0";
@@ -39,7 +40,7 @@ pub fn init(
         )
     );
 
-    let alice = root.create_user(AccountId::new_unchecked("alice".to_string()), to_yocto("100"));
+    let alice = root.create_user("alice".to_string(), to_yocto("100"));
 
     let token_receiver = deploy!(
         contract: TokenReceiverContract,
@@ -47,7 +48,7 @@ pub fn init(
         bytes: &TOKEN_RECEIVER_WASM_BYTES,
         signer_account: root,
         init_method: new(
-            nft.account_id()
+            sft.account_id()
         )
     );
 
