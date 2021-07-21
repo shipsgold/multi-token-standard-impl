@@ -1,4 +1,5 @@
 use crate::core::SemiFungibleTokenCore;
+use crate::core::SemiFungibleTokenMinter;
 use crate::core::SemiFungibleTokenResolver;
 use crate::metadata::{SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
@@ -105,66 +106,6 @@ impl SemiFungibleToken {
 		this.measure_min_ft_token_storage_cost();
 		this.measure_min_nft_token_storage_cost();
 		this
-	}
-
-	pub fn mint(
-		&mut self,
-		token_id: TokenId,
-		token_type: TokenType,
-		amount: U128,
-		token_owner_id: ValidAccountId,
-		token_metadata: Option<SemiFungibleTokenMetadata>,
-	) {
-		let initial_storage_usage = env::storage_usage();
-		assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
-		if self.token_metadata_by_id.is_some() && token_metadata.is_none() {
-			env::panic(b"Must provide metadata");
-		}
-		if self.token_type_index.get(&token_id).is_some() {
-			env::panic(b"token_id must be unique");
-		}
-		let owner_id: AccountId = token_owner_id.into();
-		// Core behavior: every token must have an owner
-		match token_type {
-			TokenType::Ft => {
-				// advance the prefix index before insertion
-				self.inc_balances_prefix();
-				//create TreeMap for balances
-				match self.ft_owners_by_id.get(&token_id) {
-					Some(mut balances) => {
-						let current_bal = balances.get(&owner_id).unwrap_or(0);
-						// TODO not quite safe
-						let amt = u128::from(amount);
-						if amt == 0 {
-							panic!("error: amount should be greater than 0")
-						}
-						balances.insert(&owner_id, &(current_bal + amt));
-						let supply = self.ft_token_supply_by_id.get(&token_id).unwrap();
-						self.ft_token_supply_by_id.insert(&token_id, &(supply + amt));
-					}
-					None => {
-						let mut balances: TreeMap<AccountId, Balance> =
-							TreeMap::new(self.get_balances_prefix());
-						// insert amount into balances
-						balances.insert(&owner_id, &amount.into());
-						self.ft_owners_by_id.insert(&token_id, &balances);
-						self.ft_token_supply_by_id.insert(&token_id, &amount.into());
-					}
-				}
-			}
-			TokenType::Nft => {
-				self.nft_owner_by_id.insert(&token_id, &owner_id);
-			}
-		}
-		// Metadata extension: Save metadata, keep variable around to return later.
-		// Note that check above already panicked if metadata extension in use but no metadata
-		// provided to call.
-		self
-			.token_metadata_by_id
-			.as_mut()
-			.and_then(|by_id| by_id.insert(&token_id, &token_metadata.as_ref().unwrap()));
-		// Return any extra attached deposit not used for storage
-		refund_deposit(env::storage_usage() - initial_storage_usage);
 	}
 
 	// returns the current storage key prefix for a ft
@@ -517,6 +458,71 @@ impl SemiFungibleToken {
 				}
 			})
 			.collect()
+	}
+}
+
+impl SemiFungibleTokenMinter for SemiFungibleToken {
+	fn mint(
+		&mut self,
+		token_id: TokenId,
+		token_type: TokenType,
+		amount: Option<U128>,
+		token_owner_id: ValidAccountId,
+		token_metadata: Option<SemiFungibleTokenMetadata>,
+	) {
+		let initial_storage_usage = env::storage_usage();
+		assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
+		if self.token_metadata_by_id.is_some() && token_metadata.is_none() {
+			env::panic(b"Must provide metadata");
+		}
+		if self.token_type_index.get(&token_id).is_some() {
+			env::panic(b"token_id must be unique");
+		}
+		let owner_id: AccountId = token_owner_id.into();
+		// Core behavior: every token must have an owner
+		match token_type {
+			TokenType::Ft => {
+				if amount.is_none() {
+					env::panic(b"Amount must be specified for Ft type tokens");
+				}
+				// advance the prefix index before insertion
+				self.inc_balances_prefix();
+				let amt = u128::from(amount.unwrap());
+				//create TreeMap for balances
+				match self.ft_owners_by_id.get(&token_id) {
+					Some(mut balances) => {
+						let current_bal = balances.get(&owner_id).unwrap_or(0);
+						// TODO not quite safe
+						if amt == 0 {
+							panic!("error: amount should be greater than 0")
+						}
+						balances.insert(&owner_id, &(current_bal + amt));
+						let supply = self.ft_token_supply_by_id.get(&token_id).unwrap();
+						self.ft_token_supply_by_id.insert(&token_id, &(supply + amt));
+					}
+					None => {
+						let mut balances: TreeMap<AccountId, Balance> =
+							TreeMap::new(self.get_balances_prefix());
+						// insert amount into balances
+						balances.insert(&owner_id, &amt);
+						self.ft_owners_by_id.insert(&token_id, &balances);
+						self.ft_token_supply_by_id.insert(&token_id, &amt);
+					}
+				}
+			}
+			TokenType::Nft => {
+				self.nft_owner_by_id.insert(&token_id, &owner_id);
+			}
+		}
+		// Metadata extension: Save metadata, keep variable around to return later.
+		// Note that check above already panicked if metadata extension in use but no metadata
+		// provided to call.
+		self
+			.token_metadata_by_id
+			.as_mut()
+			.and_then(|by_id| by_id.insert(&token_id, &token_metadata.as_ref().unwrap()));
+		// Return any extra attached deposit not used for storage
+		refund_deposit(env::storage_usage() - initial_storage_usage);
 	}
 }
 
