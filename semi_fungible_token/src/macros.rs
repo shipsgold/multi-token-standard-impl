@@ -7,7 +7,7 @@ macro_rules! impl_semi_fungible_token_core {
     ($contract: ident, $token: ident) => {
         use $crate::core::SemiFungibleTokenCore;
         use $crate::core::SemiFungibleTokenResolver;
-        use $crate::token::TokenId;
+        use $crate::TokenId;
 
         #[near_bindgen]
         impl SemiFungibleTokenCore for $contract {

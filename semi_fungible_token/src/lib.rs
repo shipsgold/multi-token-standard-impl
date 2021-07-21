@@ -4,7 +4,7 @@ pub mod core;
 /// This covers both the contract metadata and the individual token metadata.
 pub mod metadata;
 /// The Token struct for the SemiFungibleToken token standard.
-pub mod token;
+mod token;
 // Utils for the contract
 mod utils;
 mod macros;
