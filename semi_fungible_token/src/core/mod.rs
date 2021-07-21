@@ -70,7 +70,7 @@ pub trait SemiFungibleTokenCore {
         amount: U128,
         memo: Option<String>,
         msg: String,
-    ) -> PromiseOrValue<bool>;
+    ) -> PromiseOrValue<U128>;
 
     /// Batch token transfer. Transfer a tokens given token_ids and amounts. The token ids can correspond to  
     /// either Non-Fungible Tokens or Fungible Tokens or some combination of the two. The token ids 
@@ -147,7 +147,7 @@ pub trait SemiFungibleTokenCore {
         amounts: Vec<U128>,
         memo: Option<String>,
         msg: String,
-    ) -> PromiseOrValue<bool>;
+    ) -> PromiseOrValue<Vec<U128>>;
 
     /// Get the balance of an an account given token_id. For fungible token returns back amount, for 
     /// non fungible token it returns back constant 1.
