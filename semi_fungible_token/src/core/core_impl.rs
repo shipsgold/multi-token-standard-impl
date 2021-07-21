@@ -519,6 +519,7 @@ impl SemiFungibleToken {
 			.collect()
 	}
 }
+
 impl SemiFungibleTokenResolver for SemiFungibleToken {
 	fn sft_resolve_transfer(
 		&mut self,
