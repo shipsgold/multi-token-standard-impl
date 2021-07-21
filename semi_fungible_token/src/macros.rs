@@ -70,7 +70,7 @@ macro_rules! impl_semi_fungible_token_core {
                 self.$token.balance_of(owner_id, token_id)
             }
 
-            fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<u128> {
+            fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<U128> {
                 self.$token.balance_of_batch(owner_id, token_ids)
             }
 
