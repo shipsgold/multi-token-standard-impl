@@ -340,7 +340,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		amount: U128,
 		memo: Option<String>,
 		msg: String,
-	) ->PromiseOrValue<bool> {
+	) ->PromiseOrValue<U128> {
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
 		self.internal_transfer(&sender_id, receiver_id.as_ref(), &token_id, amount.into(), memo);
@@ -383,7 +383,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		token_ids: Vec<TokenId>, 
 		amounts: Vec<U128>, 
 		memo: Option<String>, 
-		msg: String)->PromiseOrValue<bool>{
+		msg: String)->PromiseOrValue<Vec<U128>>{
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
 		self.internal_transfer_batch(&sender_id, receiver_id.as_ref(), &token_ids, &amounts, memo);
@@ -443,54 +443,58 @@ impl SemiFungibleToken {
 								assert_eq!(returned_amount.len(), amounts.len(), "Amounts returned do not match length");
 								returned_amount.into()
 						} else {
-								amounts.into()
+								amounts.clone().into()
 						}
 					}
-				PromiseResult::Failed => amounts.into(),
+				PromiseResult::Failed => amounts.clone().into(),
 		};
 		returned_amounts.iter().enumerate().map(|(idx, returned_amount)|{
-			if returned_amount.clone().into() > 0 {
-				match self.token_type_index.get(&token_ids[idx]).expect("Token type does not exist") {
+			let ret_amt:u128 = returned_amount.clone().into();
+			if  ret_amt <= 0 {
+				return U128::from(0);
+			}
+			match self.token_type_index.get(&token_ids[idx]).expect("Token type does not exist") {
 					TokenType::FT => {
 						let unused_amount = std::cmp::min(amounts[idx].into(), returned_amount.clone().into());
-						let mut balances = self.ft_owners_by_id.get(&token_ids[idx])
-						.expect(format!("Token id: {} does not exist", token_ids[idx]));
-
-						let receiver_balance = balances.get(&receiver_id).unwrap_or(0);
+						let mut balances = self.ft_owners_by_id.get(&token_ids[idx]).expect(&format!("Token id {} does not exist",&token_ids[idx]));
+						let receiver_balance = balances.get(&receiver_id).expect("Token receiver no longer exists");
 						if receiver_balance > 0 {
-							let refund_amount = std::cmp::min(receiver_balance, unused_amount);
+							let refund_amount:u128 = std::cmp::min(receiver_balance, unused_amount);
 							balances.insert(&receiver_id, &(receiver_balance - refund_amount));
-							match balances.get(&sender_id) {
+							return match balances.get(&sender_id) {
 								Some(sender_balance) => {
 									balances.insert(&sender_id, &(sender_balance + refund_amount));
 									log!("Refund {} from {} to {}", refund_amount, receiver_id, sender_id);
-									(amounts[idx].into() - refund_amount).into()
+									let amount:u128 = amounts[idx].into();
+									U128::from(amount - refund_amount)
 								}
 								None => {
 									let supply = self.ft_token_supply_by_id.get(&token_ids[idx]).expect("Token has no supply");
 									self.ft_token_supply_by_id.insert(&token_ids[idx], &(supply - refund_amount));
 									log!("The account of the sender was deleted");
-									0.into()
+									U128::from(0)
 									}
 								}
+						}else {
+							return U128::from(0)
 						}
-					} 
+					}
 					TokenType::NFT => {
 						if let Some(current_owner) = self.nft_owner_by_id.get(&token_ids[idx]) {
 							if current_owner != receiver_id {
-								return 0.into()
+								return U128::from(0) // .into()
 							} else {
 								log!("Return token {} from @{} to @{}", token_ids[idx], &receiver_id, &sender_id);
 								self.internal_transfer_unguarded(&token_ids[idx], 1, &receiver_id, &sender_id);							
-								return 1.into();
+								return U128::from(1)
 							}
 						}
+						U128::from(0)
+
 					}
 				}
-			}
-		}).collect()
+			}).collect()
 	}
-
 }
 impl SemiFungibleTokenResolver for SemiFungibleToken {
  	fn sft_resolve_transfer(&mut self, sender_id: AccountId, receiver_id: AccountId, token_ids: Vec<TokenId>, amounts: Vec<U128>) -> Vec<U128>{
