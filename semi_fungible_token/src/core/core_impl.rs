@@ -199,12 +199,16 @@ impl SemiFungibleToken {
 		#[allow(clippy::ptr_arg)] token_id: &TokenId,
 		sender_id: &AccountId,
 		receiver_id: &AccountId,
+		amount: u128,
 	) {
 		if sender_id == receiver_id {
 			panic!("Sender and receiver cannot be the same")
 		}
 		let token_holders = self.ft_owners_by_id.get(token_id).expect("Could not find token");
-		token_holders.get(sender_id).expect("Not a token owner");
+		let balance = token_holders.get(sender_id).expect("Not a token owner");
+		if balance < amount {
+			panic!("Amount exceeds balance");
+		}
 	}
 
 	/// Transfer from current owner to receiver_id, checking that sender is allowed to transfer.
@@ -225,18 +229,13 @@ impl SemiFungibleToken {
 				owner_id = self.nft_owner_by_id.get(token_id).unwrap();
 				assert_ne!(&owner_id, receiver_id, "Current and next owner must differ");
 				assert_eq!(&owner_id, sender_id, "Unauthorized sender must be owner");
-				let balance =
-					self.ft_owners_by_id.get(token_id).and_then(|by_id| by_id.get(&sender_id)).unwrap();
-				if balance < amount {
-					panic!("Amount exceeds balance");
-				}
 			}
 			TokenType::Ft => {
-				self.verify_ft_transferable(token_id, sender_id, receiver_id);
+				self.verify_ft_transferable(token_id, sender_id, receiver_id, amount);
 			}
 		}
 		self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
-
+		// TODO this might be problematic if 100 log limit and called from a looping construct
 		log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
 		if let Some(memo) = memo {
 			log!("Memo: {}", memo);
