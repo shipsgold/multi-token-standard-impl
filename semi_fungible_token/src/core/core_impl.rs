@@ -374,12 +374,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 	}
 
 	fn balance_of_batch(&self, owner_id: AccountId, token_ids: Vec<TokenId>) -> Vec<U128> {
-		token_ids
-			.iter()
-			.map(|token_id| {
-				self.balance_of(owner_id.clone(), token_id.clone())
-			})
-			.collect()
+		token_ids.iter().map(|token_id| self.balance_of(owner_id.clone(), token_id.clone())).collect()
 	}
 
 	fn total_supply(&self, token_id: TokenId) -> U128 {
@@ -485,9 +480,20 @@ impl SemiFungibleTokenMinter for SemiFungibleToken {
 		if self.token_metadata_by_id.is_some() && token_metadata.is_none() {
 			env::panic(b"Must provide metadata");
 		}
-		if self.token_type_index.get(&token_id).is_some() {
-			env::panic(b"token_id must be unique");
+
+		// Every token must have a token type and every NFT type cannot be reminted
+		match self.token_type_index.get(&token_id) {
+			Some(TokenType::Ft) => {
+				assert_eq!(token_type, TokenType::Ft, "Type must be of FT time tokenId already exists")
+			}
+			Some(TokenType::Nft) => {
+				panic!("Attempting to mint already minted NFT");
+			}
+			None => {
+				self.token_type_index.insert(&token_id, &token_type);
+			}
 		}
+
 		let owner_id: AccountId = token_owner_id.into();
 		// Core behavior: every token must have an owner
 		match token_type {
