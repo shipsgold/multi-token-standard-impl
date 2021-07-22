@@ -1,7 +1,10 @@
 use near_sdk::AccountId;
 use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount};
 use semi_fungible_token::ContractContract as SftContract;
-use semi_fungible_token_standard::TokenId;
+use semi_fungible_token_standard::metadata::{
+    SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC,
+};
+use semi_fungible_token_standard::{TokenId, TokenType};
 use token_receiver::TokenReceiverContract;
 
 // Load in contract bytes at runtime
@@ -13,7 +16,8 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
 pub const SFT_ID: &str = "sft";
 const TOKEN_RECEIVER_ID: &str = "token-receiver";
 // TODO: how to export String instead of &str? Way too much `into`/`to_string` with &str.
-pub const TOKEN_ID: &str = "0";
+pub const NFT_TOKEN_ID: &str = "1";
+pub const FT_TOKEN_ID: &str = "2";
 
 /// Initialize simulator and return:
 /// * root: the root user, set as owner_id for NFT contract, owns a token with ID=1
@@ -52,30 +56,39 @@ pub fn init(
         )
     );
 
-    (root, sft, alice, token_receiver)
-
-    /*call!(
+    call!(
         root,
-        nft.nft_mint(
-            TOKEN_ID.into(),
+        sft.sft_mint(
+            NFT_TOKEN_ID.to_string(),
+            TokenType::Nft,
+            None,
             root.valid_account_id(),
-            TokenMetadata {
-                title: Some("Olympus Mons".into()),
-                description: Some("The tallest mountain in the charted solar system".into()),
-                media: None,
-                media_hash: None,
-                copies: Some(1u64),
-                issued_at: None,
-                expires_at: None,
-                starts_at: None,
-                updated_at: None,
-                extra: None,
-                reference: None,
+            Some(SemiFungibleTokenMetadata {
+                reference: Some("/some/uri/reference/{id}_token.json".into()),
                 reference_hash: None,
-            }
+                spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string()
+            })
         ),
         deposit = 7000000000000000000000
-    );*/
+    );
+
+    call!(
+        root,
+        sft.sft_mint(
+            FT_TOKEN_ID.to_string(),
+            TokenType::Ft,
+            Some(100.into()),
+            root.valid_account_id(),
+            Some(SemiFungibleTokenMetadata {
+                reference: Some("/some/uri/reference/ft/{id}_token.json".into()),
+                reference_hash: None,
+                spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string()
+            })
+        ),
+        deposit = 7000000000000000000000
+    );
+
+    (root, sft, alice, token_receiver)
 }
 
 pub fn helper_mint(
