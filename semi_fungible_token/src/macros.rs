@@ -91,10 +91,10 @@ macro_rules! impl_semi_fungible_token_core {
 #[macro_export]
 macro_rules! impl_semi_fungible_token_core_with_minter {
     ($contract: ident, $token: ident) => {
-        use $crate::impl_semi_fungible_token_core;
         use $crate::core::SemiFungibleTokenMinter;
+        use $crate::impl_semi_fungible_token_core;
         use $crate::metadata::SemiFungibleTokenMetadata;
-        
+
         impl_semi_fungible_token_core!($contract, $token);
 
         #[near_bindgen]

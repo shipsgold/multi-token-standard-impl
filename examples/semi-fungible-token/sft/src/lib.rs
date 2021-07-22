@@ -48,5 +48,18 @@ impl Contract {
       ),
     }
   }
+
+  #[payable]
+  pub fn sft_mint(
+    &mut self,
+    token_id: TokenId,
+    token_type: TokenType,
+    amount: Option<U128>,
+    token_owner_id: ValidAccountId,
+    token_metadata: Option<SemiFungibleTokenMetadata>,
+  ) {
+    self.token.mint(token_id, token_type, amount, token_owner_id, token_metadata)
+  }
 }
-semi_fungible_token_standard::impl_semi_fungible_token_core!(Contract, token);
+semi_fungible_token_standard::impl_semi_fungible_token_core_with_minter!(Contract, token);
+//semi_fungible_token_standard::impl_semi_fungible_token_minter!(Contract, token);
