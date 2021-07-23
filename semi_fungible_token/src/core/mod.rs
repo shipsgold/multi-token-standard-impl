@@ -2,8 +2,10 @@ mod core_impl;
 mod receiver;
 mod resolver;
 mod minter;
+mod storage_impl;
 
 pub use self::core_impl::*;
+pub use self::storage_impl::*;
 
 pub use self::receiver::*;
 pub use self::resolver::*;

@@ -54,8 +54,8 @@ pub struct SemiFungibleToken {
 
 	// The storage size in bytes for each new token
 	pub extra_storage_in_bytes_per_nft_token: StorageUsage,
-	pub extra_storage_in_bytes_per_ft_token_balance: StorageUsage,
-	pub extra_storage_in_bytes_per_ft_token_creation: StorageUsage,
+	pub ft_account_storage_usage: StorageUsage,
+	pub ft_token_storage_usage: StorageUsage,
 
 	// index token id and token type to aid in uniqueness guarantees
 	pub token_type_index: LookupMap<TokenId, TokenType>,
@@ -93,9 +93,9 @@ impl SemiFungibleToken {
 		let mut this = Self {
 			owner_id: owner_id.into(),
 			owner_prefix: owner_prefix.clone(),
+			ft_token_storage_usage: 0,
+			ft_account_storage_usage: 0,
 			extra_storage_in_bytes_per_nft_token: 0,
-			extra_storage_in_bytes_per_ft_token_balance: 0,
-			extra_storage_in_bytes_per_ft_token_creation: 0,
 			ft_owners_by_id: TreeMap::new(owner_prefix.clone()),
 			nft_owner_by_id: TreeMap::new([owner_prefix, "n".into()].concat()),
 			token_type_index: LookupMap::new(token_type_prefix.into_storage_key()),
@@ -126,8 +126,7 @@ impl SemiFungibleToken {
 		// 1. add data to calculate space usage
 		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> =
 			TreeMap::new(self.get_balances_prefix());
-		self.extra_storage_in_bytes_per_ft_token_creation =
-			initial_storage_usage - env::storage_usage();
+		self.ft_token_storage_usage = initial_storage_usage - env::storage_usage();
 		let storage_after_token_creation = env::storage_usage();
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
 		let tmp_owner_id = "a".repeat(64);
@@ -137,8 +136,7 @@ impl SemiFungibleToken {
 		self.ft_owners_by_id.insert(&tmp_token_id, &tmp_balance_lookup);
 
 		// 2. measure the space taken up
-		self.extra_storage_in_bytes_per_ft_token_balance =
-			env::storage_usage() - storage_after_token_creation;
+		self.ft_account_storage_usage = env::storage_usage() - storage_after_token_creation;
 
 		// 3. roll it all back
 		self.ft_owners_by_id.remove(&tmp_token_id);
@@ -172,9 +170,68 @@ impl SemiFungibleToken {
 		self.nft_owner_by_id.remove(&tmp_token_id);
 	}
 
+	pub fn internal_register_account(&mut self, token_id: TokenId, account_id: &AccountId) {
+		let token_type = self
+			.token_type_index
+			.get(&token_id)
+			.unwrap_or_else(|| panic!("token_id {} not found", token_id));
+		if token_type == TokenType::Ft
+			&& self.ft_owners_by_id.get(&token_id).unwrap().insert(&account_id, &0).is_some()
+		{
+			env::panic(b"The account is already registered");
+		}
+	}
+
+	pub fn internal_unwrap_balance_of(
+		&self,
+		#[allow(clippy::ptr_arg)] token_id: &TokenId,
+		account_id: &AccountId,
+	) -> Balance {
+		match self.ft_owners_by_id.get(token_id) {
+			Some(balances) => balances
+				.get(account_id)
+				.unwrap_or_else(|| panic!("The account_id {} not found", account_id)),
+			None => env::panic(format!("The token_id {} is not valid", token_id).as_bytes()),
+		}
+	}
+
+	pub fn internal_deposit(
+		&mut self,
+		#[allow(clippy::ptr_arg)] token_id: &TokenId,
+		account_id: &AccountId,
+		amount: Balance,
+	) {
+		let balance = self.internal_unwrap_balance_of(token_id, account_id);
+		if let Some(new_balance) = balance.checked_add(amount) {
+			self.ft_owners_by_id.get(token_id).unwrap().insert(&account_id, &new_balance);
+			let mut total_supply = self.ft_token_supply_by_id.get(token_id).unwrap();
+			total_supply.checked_add(amount).expect("Total supply overflow");
+			self.ft_token_supply_by_id.insert(token_id, &total_supply);
+		} else {
+			env::panic(b"Balance overflow");
+		}
+	}
+
+	pub fn internal_withdraw(
+		&mut self,
+		#[allow(clippy::ptr_arg)] token_id: &TokenId,
+		account_id: &AccountId,
+		amount: Balance,
+	) {
+		let balance = self.internal_unwrap_balance_of(token_id, account_id);
+		if let Some(new_balance) = balance.checked_sub(amount) {
+			self.ft_owners_by_id.get(token_id).unwrap().insert(&account_id, &new_balance);
+			let mut total_supply = self.ft_token_supply_by_id.get(token_id).unwrap();
+			total_supply.checked_sub(amount).expect("Total supply overflow");
+			self.ft_token_supply_by_id.insert(token_id, &total_supply);
+		} else {
+			env::panic(b"The account doesn't have enough balance");
+		}
+	}
+
 	/// Transfer token_id from `from` to `to`
 	///
-	/// Do not perform any safety checks or do any logging
+	///
 	pub fn internal_transfer_unguarded(
 		&mut self,
 		#[allow(clippy::ptr_arg)] token_id: &TokenId,
@@ -188,7 +245,8 @@ impl SemiFungibleToken {
 				self.nft_owner_by_id.insert(token_id, to);
 			}
 			Some(TokenType::Ft) => {
-				self.ft_owners_by_id.get(token_id).unwrap().insert(to, &amount);
+				self.internal_withdraw(token_id, from, amount);
+				self.internal_deposit(token_id, to, amount);
 			}
 			_ => (),
 		};
@@ -235,7 +293,7 @@ impl SemiFungibleToken {
 			}
 		}
 		self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
-		// TODO this might be problematic if 100 log limit and called from a looping construct
+		// TODO this might be problematic if 100 log limit and called from a looping construc
 		log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
 		if let Some(memo) = memo {
 			log!("Memo: {}", memo);
