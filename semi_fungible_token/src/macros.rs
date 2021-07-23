@@ -34,6 +34,7 @@ macro_rules! impl_semi_fungible_token_core {
                 self.$token.sft_transfer_call(receiver_id, token_id, amount, memo, msg)
             }
 
+            #[payable]
             fn sft_batch_transfer(
                 &mut self,
                 receiver_id: AccountId,
@@ -44,6 +45,7 @@ macro_rules! impl_semi_fungible_token_core {
                 self.$token.sft_batch_transfer(receiver_id, token_id, amounts, memo)
             }
 
+            #[payable]
             fn sft_batch_transfer_call(
                 &mut self,
                 receiver_id: AccountId,
