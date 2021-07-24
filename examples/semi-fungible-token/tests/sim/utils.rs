@@ -1,5 +1,7 @@
+use near_sdk::json_types::U128;
 use near_sdk::AccountId;
 use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount};
+use rand::prelude::*;
 use semi_fungible_token::ContractContract as SftContract;
 use semi_fungible_token_standard::metadata::{
     SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC,
@@ -19,6 +21,37 @@ const TOKEN_RECEIVER_ID: &str = "token-receiver";
 pub const NFT_TOKEN_ID: &str = "1";
 pub const FT_TOKEN_ID: &str = "2";
 
+pub fn generate_random_token_tuples(
+    size: u128,
+) -> (Vec<TokenId>, Vec<TokenType>, Vec<U128>, Vec<Option<SemiFungibleTokenMetadata>>) {
+    let mut token_types: Vec<TokenType> = vec![];
+    let mut amounts: Vec<U128> = vec![];
+    let mut token_ids: Vec<TokenId> = vec![];
+    let mut metadatas: Vec<Option<SemiFungibleTokenMetadata>> = vec![];
+    let mut counter: u128 = 0;
+    for _ in 1..size {
+        if rand::random::<bool>() == true {
+            token_types.push(TokenType::Ft);
+            let amount: u128 = rand::random::<u128>();
+            amounts.push(amount.into());
+        } else {
+            token_types.push(TokenType::Nft);
+            amounts.push(1.into());
+        }
+        let metadata = if rand::random::<bool>() == true {
+            Some(SemiFungibleTokenMetadata {
+                reference: Some("/some/uri/reference/{id}_token.json".into()),
+                reference_hash: None,
+                spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string(),
+            })
+        } else {
+            None
+        };
+        metadatas.push(metadata);
+        token_ids.push(format!("generated_{}", counter));
+    }
+    (token_ids, token_types, amounts, metadatas)
+}
 /// Initialize simulator and return:
 /// * root: the root user, set as owner_id for NFT contract, owns a token with ID=1
 /// * nft: the NFT contract, callable with `call!` and `view!`
@@ -89,6 +122,10 @@ pub fn init(
     );
 
     (root, sft, alice, token_receiver)
+}
+
+pub fn init_batch() {
+
 }
 
 pub fn helper_mint(

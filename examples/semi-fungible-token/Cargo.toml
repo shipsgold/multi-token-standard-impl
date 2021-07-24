@@ -8,6 +8,7 @@ edition = "2018"
 semi-fungible-token-standard = { path = "../../semi_fungible_token" }
 near-sdk = "3.1.0" 
 near-sdk-sim = "3.2.0"
+rand = "0.8.4"
 
 # remember to include a line for each contract
 semi-fungible-token = { path = "./sft" }
