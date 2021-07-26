@@ -4,7 +4,7 @@
 # Summary
 [summary]: #summary
 
-A standard interface for  a multi token standard that supports fungible, semi-fungible, and tokens of any typeallowing for ownership, transfer, and batch transfer of tokens generally regardless of specific type.
+A standard interface for  a multi token standard that supports fungible, semi-fungible, and tokens of any type, allowing for ownership, transfer, and batch transfer of tokens generally regardless of specific type.
 
 # Motivation
 [motivation]: #motivation
@@ -277,7 +277,7 @@ pub trait MultiTokenCore {
     fn mt_batch_transfer(
         &mut self,
         receiver_id: AccountId,
-        token_id: Vec<TokenId>,
+        token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
     );
