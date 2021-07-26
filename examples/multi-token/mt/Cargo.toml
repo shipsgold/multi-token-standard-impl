@@ -1,6 +1,6 @@
   
 [package]
-name = "semi-fungible-token"
+name = "multi-token"
 version = "0.0.1"
 authors = ["Ships Gold zane@ships.gold"]
 edition = "2018"
@@ -10,4 +10,4 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 near-sdk = "3.1.0" 
-semi-fungible-token-standard = { path = "../../../semi_fungible_token" }
+multi-token-standard = { path = "../../../multi_token" }

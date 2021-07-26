@@ -3,27 +3,27 @@
 ///
 
 #[macro_export]
-macro_rules! impl_semi_fungible_token_core {
+macro_rules! impl_multi_token_core {
     ($contract: ident, $token: ident) => {
-        use $crate::core::SemiFungibleTokenCore;
-        use $crate::core::SemiFungibleTokenResolver;
+        use $crate::core::MultiTokenCore;
+        use $crate::core::MultiTokenResolver;
         use $crate::{TokenId, TokenType};
 
         #[near_bindgen]
-        impl SemiFungibleTokenCore for $contract {
+        impl MultiTokenCore for $contract {
             #[payable]
-            fn sft_transfer(
+            fn mt_transfer(
                 &mut self,
                 receiver_id: AccountId,
                 token_id: TokenId,
                 amount: U128,
                 memo: Option<String>,
             ) {
-                self.$token.sft_transfer(receiver_id, token_id, amount, memo)
+                self.$token.mt_transfer(receiver_id, token_id, amount, memo)
             }
 
             #[payable]
-            fn sft_transfer_call(
+            fn mt_transfer_call(
                 &mut self,
                 receiver_id: AccountId,
                 token_id: TokenId,
@@ -31,22 +31,22 @@ macro_rules! impl_semi_fungible_token_core {
                 memo: Option<String>,
                 msg: String,
             ) -> PromiseOrValue<U128> {
-                self.$token.sft_transfer_call(receiver_id, token_id, amount, memo, msg)
+                self.$token.mt_transfer_call(receiver_id, token_id, amount, memo, msg)
             }
 
             #[payable]
-            fn sft_batch_transfer(
+            fn mt_batch_transfer(
                 &mut self,
                 receiver_id: AccountId,
                 token_id: Vec<TokenId>,
                 amounts: Vec<U128>,
                 memo: Option<String>,
             ) {
-                self.$token.sft_batch_transfer(receiver_id, token_id, amounts, memo)
+                self.$token.mt_batch_transfer(receiver_id, token_id, amounts, memo)
             }
 
             #[payable]
-            fn sft_batch_transfer_call(
+            fn mt_batch_transfer_call(
                 &mut self,
                 receiver_id: AccountId,
                 token_ids: Vec<TokenId>,
@@ -54,7 +54,7 @@ macro_rules! impl_semi_fungible_token_core {
                 memo: Option<String>,
                 msg: String,
             ) -> PromiseOrValue<Vec<U128>> {
-                self.$token.sft_batch_transfer_call(receiver_id, token_ids, amounts, memo, msg)
+                self.$token.mt_batch_transfer_call(receiver_id, token_ids, amounts, memo, msg)
             }
 
             fn balance_of(&self, owner_id: AccountId, token_id: TokenId) -> U128 {
@@ -75,39 +75,39 @@ macro_rules! impl_semi_fungible_token_core {
         }
 
         #[near_bindgen]
-        impl SemiFungibleTokenResolver for $contract {
+        impl MultiTokenResolver for $contract {
             #[private]
-            fn sft_resolve_transfer(
+            fn mt_resolve_transfer(
                 &mut self,
                 sender_id: AccountId,
                 receiver_id: AccountId,
                 token_ids: Vec<TokenId>,
                 amounts: Vec<U128>,
             ) -> Vec<U128> {
-                self.$token.sft_resolve_transfer(sender_id, receiver_id, token_ids, amounts)
+                self.$token.mt_resolve_transfer(sender_id, receiver_id, token_ids, amounts)
             }
         }
     };
 }
 
 #[macro_export]
-macro_rules! impl_semi_fungible_token_core_with_minter {
+macro_rules! impl_multi_token_core_with_minter {
     ($contract: ident, $token: ident) => {
-        use $crate::core::SemiFungibleTokenMinter;
-        use $crate::impl_semi_fungible_token_core;
-        use $crate::metadata::SemiFungibleTokenMetadata;
+        use $crate::core::MultiTokenMinter;
+        use $crate::impl_multi_token_core;
+        use $crate::metadata::MultiTokenMetadata;
 
-        impl_semi_fungible_token_core!($contract, $token);
+        impl_multi_token_core!($contract, $token);
 
         #[near_bindgen]
-        impl SemiFungibleTokenMinter for $contract {
+        impl MultiTokenMinter for $contract {
             fn mint(
                 &mut self,
                 token_id: TokenId,
                 token_type: TokenType,
                 amount: Option<U128>,
                 token_owner_id: ValidAccountId,
-                token_metadata: Option<SemiFungibleTokenMetadata>,
+                token_metadata: Option<MultiTokenMetadata>,
             ) {
                 self.$token.mint(token_id, token_type, amount, token_owner_id, token_metadata)
             }

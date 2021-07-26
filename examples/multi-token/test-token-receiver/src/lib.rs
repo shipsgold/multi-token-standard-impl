@@ -1,13 +1,13 @@
 /*!
-A stub contract that implements sft_on_transfer for simulation testing sft_transfer_call.
+A stub contract that implements mt_on_transfer for simulation testing mt_transfer_call.
 */
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
 use near_sdk::{
     env, ext_contract, log, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, PromiseOrValue,
 };
-use semi_fungible_token_standard::core::SemiFungibleTokenReceiver;
-use semi_fungible_token_standard::TokenId;
+use multi_token_standard::core::MultiTokenReceiver;
+use multi_token_standard::TokenId;
 
 const BASE_GAS: u64 = 5_000_000_000_000;
 const PROMISE_CALL: u64 = 5_000_000_000_000;
@@ -18,7 +18,7 @@ const NO_DEPOSIT: Balance = 0;
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct TokenReceiver {
-    semi_fungible_token_account_id: AccountId,
+    multi_token_account_id: AccountId,
 }
 
 // Defining cross-contract interface. This allows to create a new promise.
@@ -35,13 +35,13 @@ trait ValueReturnTrait {
 #[near_bindgen]
 impl TokenReceiver {
     #[init]
-    pub fn new(semi_fungible_token_account_id: AccountId) -> Self {
-        Self { semi_fungible_token_account_id }
+    pub fn new(multi_token_account_id: AccountId) -> Self {
+        Self { multi_token_account_id }
     }
 }
 
 #[near_bindgen]
-impl SemiFungibleTokenReceiver for TokenReceiver {
+impl MultiTokenReceiver for TokenReceiver {
     /// Returns true if token should be returned to `sender_id`
     /// Four supported `msg`s:
     /// * "return-it-now" - immediately return `true`
@@ -50,7 +50,7 @@ impl SemiFungibleTokenReceiver for TokenReceiver {
     /// * "keep-it-later" - make cross-contract call which resolves with `false`
     /// Otherwise panics, which should also return token to `sender_id`
     ///
-    fn sft_on_transfer(
+    fn mt_on_transfer(
         &mut self,
         sender_id: AccountId,
         token_ids: Vec<TokenId>,
@@ -63,11 +63,11 @@ impl SemiFungibleTokenReceiver for TokenReceiver {
     /*
         assert_eq!(
             &env::predecessor_account_id(),
-            &self.semi_fungible_token_account_id,
+            &self.multi_token_account_id,
             "Only supports the one semi-fungible token contract"
         );
         log!(
-            "in sft_on_transfer; sender_id={}, previous_owner_id={}, token_id={}, msg={}",
+            "in mt_on_transfer; sender_id={}, previous_owner_id={}, token_id={}, msg={}",
             &sender_id,
             &previous_owner_id,
             &token_id,

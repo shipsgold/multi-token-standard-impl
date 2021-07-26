@@ -5,12 +5,12 @@ pub mod core;
 pub mod metadata;
 /// This covers the storage management for the tokens
 pub mod storage_management;
-/// The Token struct for the SemiFungibleToken token standard.
+/// The Token struct for the MultiToken token standard.
 mod token;
 // Utils for the contract
 mod macros;
 mod utils;
 
-pub use self::core::SemiFungibleToken;
+pub use self::core::MultiToken;
 pub use self::token::{Token, TokenId, TokenType};
 pub use macros::*;

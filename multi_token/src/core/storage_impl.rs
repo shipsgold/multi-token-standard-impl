@@ -1,10 +1,10 @@
 use crate::storage_management::{StorageBalance, StorageBalanceBounds, StorageManagement};
-use crate::SemiFungibleToken;
+use crate::MultiToken;
 use crate::{TokenId, TokenType};
 use near_sdk::json_types::U128;
 use near_sdk::{assert_one_yocto, env, log, AccountId, Balance, Promise};
 
-impl SemiFungibleToken {
+impl MultiToken {
   pub fn internal_storage_unregister(
     &mut self,
     token_id: TokenId,
@@ -82,7 +82,7 @@ impl SemiFungibleToken {
   }
 }
 
-impl StorageManagement for SemiFungibleToken {
+impl StorageManagement for MultiToken {
   // `registration_only` doesn't affect the implementation for vanilla fungible token.
   // TODO make more efficient
   #[allow(unused_variables)]

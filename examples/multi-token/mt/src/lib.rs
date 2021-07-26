@@ -19,19 +19,19 @@ use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{
   env, log, near_bindgen, AccountId, Balance, BorshStorageKey, PanicOnDefault, PromiseOrValue,
 };
-use semi_fungible_token_standard::SemiFungibleToken;
+use multi_token_standard::MultiToken;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
-  token: SemiFungibleToken,
+  token: MultiToken,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, BorshStorageKey)]
 enum StorageKey {
-  SemiFungibleTokenOwner,
-  SemiFungibleTokenMetadata,
-  SemiFungibleTokenSupply,
+  MultiTokenOwner,
+  MultiTokenMetadata,
+  MultiTokenSupply,
 }
 
 #[near_bindgen]
@@ -40,26 +40,26 @@ impl Contract {
   pub fn new(owner_id: ValidAccountId) -> Self {
     assert!(!env::state_exists(), "Already initialized");
     Self {
-      token: SemiFungibleToken::new(
-        StorageKey::SemiFungibleTokenOwner,
+      token: MultiToken::new(
+        StorageKey::MultiTokenOwner,
         owner_id,
-        Some(StorageKey::SemiFungibleTokenMetadata),
-        StorageKey::SemiFungibleTokenSupply,
+        Some(StorageKey::MultiTokenMetadata),
+        StorageKey::MultiTokenSupply,
       ),
     }
   }
 
   #[payable]
-  pub fn sft_mint(
+  pub fn mt_mint(
     &mut self,
     token_id: TokenId,
     token_type: TokenType,
     amount: Option<U128>,
     token_owner_id: ValidAccountId,
-    token_metadata: Option<SemiFungibleTokenMetadata>,
+    token_metadata: Option<MultiTokenMetadata>,
   ) {
     self.token.mint(token_id, token_type, amount, token_owner_id, token_metadata)
   }
 }
-semi_fungible_token_standard::impl_semi_fungible_token_core_with_minter!(Contract, token);
-//semi_fungible_token_standard::impl_semi_fungible_token_minter!(Contract, token);
+multi_token_standard::impl_multi_token_core_with_minter!(Contract, token);
+//multi_token_standard::impl_multi_token_minter!(Contract, token);

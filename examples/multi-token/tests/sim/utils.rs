@@ -2,20 +2,20 @@ use near_sdk::json_types::U128;
 use near_sdk::AccountId;
 use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount};
 use rand::prelude::*;
-use semi_fungible_token::ContractContract as SftContract;
-use semi_fungible_token_standard::metadata::{
-    SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC,
+use multi_token::ContractContract as MtContract;
+use multi_token_standard::metadata::{
+    MultiTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC,
 };
-use semi_fungible_token_standard::{TokenId, TokenType};
+use multi_token_standard::{TokenId, TokenType};
 use token_receiver::TokenReceiverContract;
 
 // Load in contract bytes at runtime
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
-    SFT_WASM_BYTES => "res/semi_fungible_token.wasm",
+    SFT_WASM_BYTES => "res/multi_token.wasm",
     TOKEN_RECEIVER_WASM_BYTES => "res/token_receiver.wasm",
 }
 
-pub const SFT_ID: &str = "sft";
+pub const SFT_ID: &str = "mt";
 const TOKEN_RECEIVER_ID: &str = "token-receiver";
 // TODO: how to export String instead of &str? Way too much `into`/`to_string` with &str.
 pub const NFT_TOKEN_ID: &str = "1";
@@ -23,11 +23,11 @@ pub const FT_TOKEN_ID: &str = "2";
 
 pub fn generate_random_token_tuples(
     size: u128,
-) -> (Vec<TokenId>, Vec<TokenType>, Vec<U128>, Vec<Option<SemiFungibleTokenMetadata>>) {
+) -> (Vec<TokenId>, Vec<TokenType>, Vec<U128>, Vec<Option<MultiTokenMetadata>>) {
     let mut token_types: Vec<TokenType> = vec![];
     let mut amounts: Vec<U128> = vec![];
     let mut token_ids: Vec<TokenId> = vec![];
-    let mut metadatas: Vec<Option<SemiFungibleTokenMetadata>> = vec![];
+    let mut metadatas: Vec<Option<MultiTokenMetadata>> = vec![];
     let mut counter: u128 = 0;
     for _ in 1..size {
         if rand::random::<bool>() == true {
@@ -39,7 +39,7 @@ pub fn generate_random_token_tuples(
             amounts.push(1.into());
         }
         let metadata = if rand::random::<bool>() == true {
-            Some(SemiFungibleTokenMetadata {
+            Some(MultiTokenMetadata {
                 reference: Some("/some/uri/reference/{id}_token.json".into()),
                 reference_hash: None,
                 spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string(),
@@ -58,13 +58,13 @@ pub fn generate_random_token_tuples(
 /// * alice: a user account, does not yet own any tokens
 /// * token_receiver: a contract implementing `nft_on_transfer` for use with `transfer_and_call`
 pub fn init(
-) -> (UserAccount, ContractAccount<SftContract>, UserAccount, ContractAccount<TokenReceiverContract>)
+) -> (UserAccount, ContractAccount<MtContract>, UserAccount, ContractAccount<TokenReceiverContract>)
 {
     let root = init_simulator(None);
     // uses default values for deposit and gas
-    let sft = deploy!(
+    let mt = deploy!(
         // Contract Proxy
-        contract: SftContract,
+        contract: MtContract,
         // Contract account id
         contract_id: SFT_ID,
         // Bytes of contract
@@ -85,18 +85,18 @@ pub fn init(
         bytes: &TOKEN_RECEIVER_WASM_BYTES,
         signer_account: root,
         init_method: new(
-            sft.account_id()
+            mt.account_id()
         )
     );
 
     call!(
         root,
-        sft.sft_mint(
+        mt.mt_mint(
             NFT_TOKEN_ID.to_string(),
             TokenType::Nft,
             None,
             root.valid_account_id(),
-            Some(SemiFungibleTokenMetadata {
+            Some(MultiTokenMetadata {
                 reference: Some("/some/uri/reference/{id}_token.json".into()),
                 reference_hash: None,
                 spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string()
@@ -107,12 +107,12 @@ pub fn init(
 
     call!(
         root,
-        sft.sft_mint(
+        mt.mt_mint(
             FT_TOKEN_ID.to_string(),
             TokenType::Ft,
             Some(100.into()),
             root.valid_account_id(),
-            Some(SemiFungibleTokenMetadata {
+            Some(MultiTokenMetadata {
                 reference: Some("/some/uri/reference/ft/{id}_token.json".into()),
                 reference_hash: None,
                 spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string()
@@ -121,7 +121,7 @@ pub fn init(
         deposit = 7000000000000000000000
     );
 
-    (root, sft, alice, token_receiver)
+    (root, mt, alice, token_receiver)
 }
 
 pub fn init_batch() {
@@ -131,7 +131,7 @@ pub fn init_batch() {
 pub fn helper_mint(
     token_id: TokenId,
     root: &UserAccount,
-    sft: &ContractAccount<SftContract>,
+    mt: &ContractAccount<MtContract>,
     title: String,
     desc: String,
 ) {

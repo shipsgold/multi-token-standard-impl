@@ -25,19 +25,19 @@ pub struct TokenMetadata {
 }
 
 /// Offers details on the contract-level metadata.
-pub trait SemiFungibleTokenMetadataProvider {
-    fn sft_metadata(&self) -> SemiFungibleTokenMetadata;
+pub trait MultiTokenMetadataProvider {
+    fn mt_metadata(&self) -> MultiTokenMetadata;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, BorshDeserialize, BorshSerialize)]
 #[serde(crate = "near_sdk::serde")]
-pub struct SemiFungibleTokenMetadata {
+pub struct MultiTokenMetadata {
     pub spec: String,              // required, essentially a version like "nft-1.0.0"
     pub reference: Option<String>, // URL to a JSON file with more info may have {id} reference for token-id substitution
     pub reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.0
 }
 
-impl SemiFungibleTokenMetadata {
+impl MultiTokenMetadata {
     pub fn assert_valid(&self) {
         assert_eq!(&self.spec, SEMI_FUNGIBLE_METADATA_SPEC);
         assert_eq!(self.reference.is_some(), self.reference_hash.is_some());

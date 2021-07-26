@@ -1,7 +1,7 @@
-use crate::core::SemiFungibleTokenCore;
-use crate::core::SemiFungibleTokenMinter;
-use crate::core::SemiFungibleTokenResolver;
-use crate::metadata::{SemiFungibleTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
+use crate::core::MultiTokenCore;
+use crate::core::MultiTokenMinter;
+use crate::core::MultiTokenResolver;
+use crate::metadata::{MultiTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
 use crate::utils::refund_deposit;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -18,8 +18,8 @@ const GAS_FOR_FT_TRANSFER_CALL: Gas = 25_000_000_000_000 + GAS_FOR_RESOLVE_TRANS
 const NO_DEPOSIT: Balance = 0;
 
 #[ext_contract(ext_self)]
-trait SemiFungibleTokenResolver {
-	fn sft_resolve_transfer(
+trait MultiTokenResolver {
+	fn mt_resolve_transfer(
 		&mut self,
 		sender_id: AccountId,
 		receiver_id: AccountId,
@@ -29,9 +29,9 @@ trait SemiFungibleTokenResolver {
 }
 
 #[ext_contract(ext_receiver)]
-pub trait SemiFungibleTokenReceiver {
+pub trait MultiTokenReceiver {
 	/// Returns true if token should be returned to `sender_id`
-	fn sft_on_transfer(
+	fn mt_on_transfer(
 		&mut self,
 		sender_id: AccountId,
 		token_ids: Vec<TokenId>,
@@ -40,15 +40,15 @@ pub trait SemiFungibleTokenReceiver {
 	) -> PromiseOrValue<Vec<U128>>;
 }
 
-/// Implementation of SemiFungibleToken-token standard.
+/// Implementation of MultiToken-token standard.
 /// There are next traits that any contract may implement:
-///     - SemiFungibleTokenCore -- interface with sft_transfer/balance/supply methods. SemiFungibleToken provides methods for it.
-///     - SemiFungibleTokenApproval -- interface with sft_approve methods. SemiFungibleToken provides methods for it.
-///     - SemiFungibleTokenMetadata -- return metadata for the token in NEP-177, up to contract to implement.
+///     - MultiTokenCore -- interface with mt_transfer/balance/supply methods. MultiToken provides methods for it.
+///     - MultiTokenApproval -- interface with mt_approve methods. MultiToken provides methods for it.
+///     - MultiTokenMetadata -- return metadata for the token in NEP-177, up to contract to implement.
 ///
 /// For example usage, see examples/non-fungible-token/src/lib.rs.
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct SemiFungibleToken {
+pub struct MultiToken {
 	// owner of contract; this is the only account allowed to call `mint`
 	pub owner_id: AccountId,
 
@@ -73,10 +73,10 @@ pub struct SemiFungibleToken {
 	pub ft_token_supply_by_id: LookupMap<TokenId, u128>,
 
 	// required by metadata extension
-	pub token_metadata_by_id: Option<LookupMap<TokenId, SemiFungibleTokenMetadata>>,
+	pub token_metadata_by_id: Option<LookupMap<TokenId, MultiTokenMetadata>>,
 }
 
-impl SemiFungibleToken {
+impl MultiToken {
 	pub fn new<Q, R, T>(
 		owner_by_id_prefix: Q,
 		owner_id: ValidAccountId,
@@ -152,7 +152,7 @@ impl SemiFungibleToken {
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
 			token_metadata_by_id.insert(
 				&tmp_token_id,
-				&SemiFungibleTokenMetadata {
+				&MultiTokenMetadata {
 					spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string(),
 					reference: None,
 					reference_hash: None,
@@ -323,8 +323,8 @@ impl SemiFungibleToken {
 	}
 }
 
-impl SemiFungibleTokenCore for SemiFungibleToken {
-	fn sft_transfer(
+impl MultiTokenCore for MultiToken {
+	fn mt_transfer(
 		&mut self,
 		receiver_id: AccountId,
 		token_id: TokenId,
@@ -336,7 +336,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		self.internal_transfer(&sender_id, &receiver_id, &token_id, amount.into(), memo);
 	}
 
-	fn sft_transfer_call(
+	fn mt_transfer_call(
 		&mut self,
 		receiver_id: AccountId,
 		token_id: TokenId,
@@ -348,7 +348,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		let sender_id = env::predecessor_account_id();
 		self.internal_transfer(&sender_id, &receiver_id, &token_id, amount.into(), memo);
 		// Initiating receiver's call and the callback
-		ext_receiver::sft_on_transfer(
+		ext_receiver::mt_on_transfer(
 			sender_id.clone(),
 			vec![token_id.clone()],
 			vec![amount],
@@ -357,7 +357,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 			NO_DEPOSIT,
 			env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
-		.then(ext_self::sft_resolve_transfer(
+		.then(ext_self::mt_resolve_transfer(
 			sender_id,
 			receiver_id,
 			vec![token_id],
@@ -369,7 +369,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		.into()
 	}
 
-	fn sft_batch_transfer(
+	fn mt_batch_transfer(
 		&mut self,
 		receiver_id: AccountId,
 		token_ids: Vec<TokenId>,
@@ -381,7 +381,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		self.internal_transfer_batch(&sender_id, &receiver_id, &token_ids, &amounts, memo);
 	}
 
-	fn sft_batch_transfer_call(
+	fn mt_batch_transfer_call(
 		&mut self,
 		receiver_id: AccountId,
 		token_ids: Vec<TokenId>,
@@ -393,7 +393,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 		let sender_id = env::predecessor_account_id();
 		self.internal_transfer_batch(&sender_id, &receiver_id, &token_ids, &amounts, memo);
 		// TODO make this efficient
-		ext_receiver::sft_on_transfer(
+		ext_receiver::mt_on_transfer(
 			sender_id.clone(),
 			token_ids.clone(),
 			amounts.clone(),
@@ -402,7 +402,7 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 			NO_DEPOSIT,
 			env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
-		.then(ext_self::sft_resolve_transfer(
+		.then(ext_self::mt_resolve_transfer(
 			sender_id,
 			receiver_id,
 			token_ids,
@@ -448,8 +448,8 @@ impl SemiFungibleTokenCore for SemiFungibleToken {
 	}
 }
 
-impl SemiFungibleToken {
-	pub fn sft_internal_resolve_transfer(
+impl MultiToken {
+	pub fn mt_internal_resolve_transfer(
 		&mut self,
 		sender_id: AccountId,
 		receiver_id: AccountId,
@@ -523,14 +523,14 @@ impl SemiFungibleToken {
 	}
 }
 
-impl SemiFungibleTokenMinter for SemiFungibleToken {
+impl MultiTokenMinter for MultiToken {
 	fn mint(
 		&mut self,
 		token_id: TokenId,
 		token_type: TokenType,
 		amount: Option<U128>,
 		token_owner_id: ValidAccountId,
-		token_metadata: Option<SemiFungibleTokenMetadata>,
+		token_metadata: Option<MultiTokenMetadata>,
 	) {
 		let initial_storage_usage = env::storage_usage();
 		assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
@@ -599,14 +599,14 @@ impl SemiFungibleTokenMinter for SemiFungibleToken {
 	}
 }
 
-impl SemiFungibleTokenResolver for SemiFungibleToken {
-	fn sft_resolve_transfer(
+impl MultiTokenResolver for MultiToken {
+	fn mt_resolve_transfer(
 		&mut self,
 		sender_id: AccountId,
 		receiver_id: AccountId,
 		token_ids: Vec<TokenId>,
 		amounts: Vec<U128>,
 	) -> Vec<U128> {
-		self.sft_internal_resolve_transfer(sender_id, receiver_id, token_ids, amounts)
+		self.mt_internal_resolve_transfer(sender_id, receiver_id, token_ids, amounts)
 	}
 }
