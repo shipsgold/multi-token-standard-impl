@@ -1,17 +1,16 @@
-- Proposal Name: semi-fungible-token
+- Proposal Name: multi-token
 - Start Date: 2021/07/24
 
 # Summary
 [summary]: #summary
 
-A standard interface for semi fungible tokens allowing for ownership, transfer, and batch transfer of tokens that are both
-fungible and non fungible tokens.
+A standard interface for  a multi token standard that supports fungible, semi-fungible, and tokens of any typeallowing for ownership, transfer, and batch transfer of tokens generally regardless of specific type.
 
 # Motivation
 [motivation]: #motivation
 Having a single contract represent both NFTs and FTs can greatly improve efficiency as demonstrated by Enjin Coin. The ability to make batch requests with multiple asset classes can reduce a many transactions transaciton to a single transaction to trade around both NFTs and FTs that are a part of same token contract.
 
-Having this will also increase Near's ability to work interoperably with other chains. This will reduce the complexity required to represent these emerging semi-fungible assets.
+Having this will also increase Near's ability to work interoperably with other chains. This will reduce the complexity required to represent these emerging asset classes.
 
 
 Prior art:
@@ -69,7 +68,7 @@ Alice needs to issue one transaction to `games` contract to transfer 5 tokens (m
  
 Technical calls:
 
-1. `alice` calls `games::sft_transfer({"receiver_id": "bob", "amount": "500000000", "token_id": "g133"})`.
+1. `alice` calls `games::mt_transfer({"receiver_id": "bob", "amount": "500000000", "token_id": "g133"})`.
 
 #### Simple batch transfer
 
@@ -94,7 +93,7 @@ Alice needs to issue one transaction to `games` contract to transfer 5 gold toke
  
 Technical calls:
 
-1. `alice` calls `games::sft_transfer_batch({"receiver_id": "bob", "amounts": ["500000000", "1000000000", "1"], "token_ids": ["g133", "s133", "uu2"]})`.
+1. `alice` calls `games::mt_transfer_batch({"receiver_id": "bob", "amounts": ["500000000", "1000000000", "1"], "token_ids": ["g133", "s133", "uu2"]})`.
 
 
 
@@ -125,9 +124,9 @@ Otherwise `games` contract accepts the results and resolves the promise completi
 - If transfer fails, `compound` doesn't need to do anything in current example, but maybe can notify `alice` of unsuccessful transfer.
 
 Technical calls:
-1. `alice` calls `games::sft_transfer_call({"receiver_id": "compound", amount: "1000000000000000000000", "token_id": "g133", msg: "interest-building"})`.
-   During the `sft_transfer_call` call, `compound` does the following:
-     fn sft_on_transfer(
+1. `alice` calls `games::mt_transfer_call({"receiver_id": "compound", amount: "1000000000000000000000", "token_id": "g133", msg: "interest-building"})`.
+   During the `mt_transfer_call` call, `compound` does the following:
+     fn mt_on_transfer(
         &mut self,
         sender_id: AccountId,
         token_ids: Vec<TokenId>,
@@ -135,8 +134,8 @@ Technical calls:
         msg: String,
     ) -> PromiseOrValue<Vec<U128>>;
 }
-    1. calls `compound::sft_on_transfer({"sender_id": "alice", "token_ids":["g133"], "amounts": ["1000000000000000000000"], msg: "interest-building"})`.
-    2. `compound` resolves the request/fails and `games` contract handles response from the promise with `games::sft_resolve_transfer` returning refunded amount if there is any or handling follow up from the result of compound cross contract call
+    1. calls `compound::mt_on_transfer({"sender_id": "alice", "token_ids":["g133"], "amounts": ["1000000000000000000000"], msg: "interest-building"})`.
+    2. `compound` resolves the request/fails and `games` contract handles response from the promise with `games::mt_resolve_transfer` returning refunded amount if there is any or handling follow up from the result of compound cross contract call
 
 #### Batch Token deposit to a contract 
 
@@ -168,9 +167,9 @@ Otherwise `games` contract accepts the results and resolves the promise completi
 - If transfer fails, `compound` doesn't need to do anything in current example, but maybe can notify `alice` of unsuccessful transfer.
 
 Technical calls:
-1. `alice` calls `games::sft_transfer_batch_call({"receiver_id": "compound", amounts: ["1000000000000000000000","1000000000000000000000", "1"], "token_ids": ["g133","s133","uu2"], msg: "interest-building"})`.
-   During the `sft_transfer_call` call, `compound` does the following:
-     fn sft_on_transfer(
+1. `alice` calls `games::mt_transfer_batch_call({"receiver_id": "compound", amounts: ["1000000000000000000000","1000000000000000000000", "1"], "token_ids": ["g133","s133","uu2"], msg: "interest-building"})`.
+   During the `mt_transfer_call` call, `compound` does the following:
+     fn mt_on_transfer(
         &mut self,
         sender_id: AccountId,
         token_ids: Vec<TokenId>,
@@ -178,15 +177,15 @@ Technical calls:
         msg: String,
     ) -> PromiseOrValue<Vec<U128>>;
 }
-    1. calls `compound::sft_on_transfer({"sender_id": "alice", amounts: ["1000000000000000000000","1000000000000000000000", "1"], "token_ids": ["g133","s133","uu2"], msg: "interest-building"})`
-    2. `compound` resolves the request/fails and `games` contract handles response from the promise with `games::sft_resolve_transfer` returning refunded amount if there is any or handling follow up from the result of compound cross contract call
+    1. calls `compound::mt_on_transfer({"sender_id": "alice", amounts: ["1000000000000000000000","1000000000000000000000", "1"], "token_ids": ["g133","s133","uu2"], msg: "interest-building"})`
+    2. `compound` resolves the request/fails and `games` contract handles response from the promise with `games::mt_resolve_transfer` returning refunded amount if there is any or handling follow up from the result of compound cross contract call
 
 # Reference-level explanation
 [reference-level-explanation]: #reference-level-explanation
 WIP implementation: https://github.com/shipsgold/multi-token-standard-impl/tree/feat/initial-token
 ### Core Trait
 ```
-pub trait SemiFungibleTokenCore {
+pub trait MultiTokenCore {
     /// Basic token transfer. Transfer a token or tokens given a token_id. The token id can correspond to  
     /// either a NonFungibleToken or Fungible Token this is differeniated by the implementation.
     ///
@@ -204,7 +203,7 @@ pub trait SemiFungibleTokenCore {
     /// * `amount`: the token amount of tokens to transfer for token_id
     /// * `memo` (optional): for use cases that may benefit from indexing or
     ///    providing information for a transfer
-    fn sft_transfer(
+    fn mt_transfer(
         &mut self,
         receiver_id: AccountId,
         token_id: TokenId,
@@ -213,8 +212,8 @@ pub trait SemiFungibleTokenCore {
     );
 
     /// Transfer token/s and call a method on a receiver contract. A successful
-    /// workflow will end in a success execution outcome to the callback on the SemiFungibleToken
-    /// contract at the method `sft_resolve_transfer`.
+    /// workflow will end in a success execution outcome to the callback on the MultiToken
+    /// contract at the method `mt_resolve_transfer`.
     ///
     /// You can think of this as being similar to attaching  tokens to a
     /// function call. It allows you to attach any Fungible or Non Fungible Token in a call to a
@@ -225,10 +224,10 @@ pub trait SemiFungibleTokenCore {
     ///   purposes
     /// * Contract MUST panic if called by someone other than token owner or,
     ///   if using Approval Management, one of the approved accounts
-    /// * The receiving contract must implement `sft_on_transfer` according to the
-    ///   standard. If it does not, SemiFungibleToken contract's `sft_resolve_transfer` MUST deal
+    /// * The receiving contract must implement `mt_on_transfer` according to the
+    ///   standard. If it does not, MultiToken contract's `mt_resolve_transfer` MUST deal
     ///   with the resulting failed cross-contract call and roll back the transfer.
-    /// * Contract MUST implement the behavior described in `sft_resolve_transfer`
+    /// * Contract MUST implement the behavior described in `mt_resolve_transfer`
     ///
     /// Arguments:
     /// * `receiver_id`: the valid NEAR account receiving the token.
@@ -239,7 +238,7 @@ pub trait SemiFungibleTokenCore {
     /// * `msg`: specifies information needed by the receiving contract in
     ///    order to properly handle the transfer. Can indicate both a function to
     ///    call and the parameters to pass to that function.
-    fn sft_transfer_call(
+    fn mt_transfer_call(
         &mut self,
         receiver_id: AccountId,
         token_id: TokenId,
@@ -275,7 +274,7 @@ pub trait SemiFungibleTokenCore {
     /// * `memo` (optional): for use cases that may benefit from indexing or
     ///    providing information for a transfer
 
-    fn sft_batch_transfer(
+    fn mt_batch_transfer(
         &mut self,
         receiver_id: AccountId,
         token_id: Vec<TokenId>,
@@ -283,8 +282,8 @@ pub trait SemiFungibleTokenCore {
         memo: Option<String>,
     );
     /// Batch transfer token/s and call a method on a receiver contract. A successful
-    /// workflow will end in a success execution outcome to the callback on the SemiFungibleToken
-    /// contract at the method `sft_resolve_batch_transfer`.
+    /// workflow will end in a success execution outcome to the callback on the MultiToken
+    /// contract at the method `mt_resolve_batch_transfer`.
     ///
     /// You can think of this as being similar to attaching  tokens to a
     /// function call. It allows you to attach any Fungible or Non Fungible Token in a call to a
@@ -295,10 +294,10 @@ pub trait SemiFungibleTokenCore {
     ///   purposes
     /// * Contract MUST panic if called by someone other than token owner or,
     ///   if using Approval Management, one of the approved accounts
-    /// * The receiving contract must implement `sft_on_transfer` according to the
-    ///   standard. If it does not, SemiFungibleToken contract's `sft_resolve_batch_transfer` MUST deal
+    /// * The receiving contract must implement `mt_on_transfer` according to the
+    ///   standard. If it does not, MultiToken contract's `mt_resolve_batch_transfer` MUST deal
     ///   with the resulting failed cross-contract call and roll back the transfer.
-    /// * Contract MUST implement the behavior described in `sft_resolve_batch_transfer`
+    /// * Contract MUST implement the behavior described in `mt_resolve_batch_transfer`
     /// * `approval_id` is for use with Approval Management extension, see
     ///   that document for full explanation.
     /// * If using Approval Management, contract MUST nullify approved accounts on
@@ -317,7 +316,7 @@ pub trait SemiFungibleTokenCore {
     ///    order to properly handle the transfer. Can indicate both a function to
     ///    call and the parameters to pass to that function.
 
-    fn sft_batch_transfer_call(
+    fn mt_batch_transfer_call(
         &mut self,
         receiver_id: AccountId,
         token_ids: Vec<TokenId>,
@@ -346,24 +345,24 @@ pub trait SemiFungibleTokenCore {
 #### Notes
 - TokenId is of type String
 ```
-pub trait SemiFungibleTokenReceiver {
-    /// Take some action after receiving a SemiFungibleToken-tokens token
+pub trait MultiTokenReceiver {
+    /// Take some action after receiving a MultiToken-tokens token
     ///
     /// Requirements:
-    /// * Contract MUST restrict calls to this function to a set of whitelisted SemiFungibleToken
+    /// * Contract MUST restrict calls to this function to a set of whitelisted MultiToken
     ///   contracts
     ///
     /// Arguments:
-    /// * `sender_id`: the sender of `sft_transfer_call`
+    /// * `sender_id`: the sender of `mt_transfer_call`
     /// * `previous_owner_id`: the account that owned the tokens prior to it being
     ///   transferred to this contract, which can differ from `sender_id` if using
     ///   Approval Management extension
-    /// * `token_ids`: the `token_ids` argument given to `sft_transfer_call`
+    /// * `token_ids`: the `token_ids` argument given to `mt_transfer_call`
     /// * `msg`: information necessary for this contract to know how to process the
     ///   request. This may include method names and/or arguments.
     ///
     /// Returns true if tokens should be returned to `sender_id`
-    fn sft_on_transfer(
+    fn mt_on_transfer(
         &mut self,
         sender_id: AccountId,
         token_ids: Vec<TokenId>,
@@ -376,17 +375,17 @@ pub trait SemiFungibleTokenReceiver {
 #### Notes
 - TokenId is of type String
 ```
-/// Used when SemiFungibleTokens are transferred using `sft_transfer_call`. This is the method that's called after `sft_on_transfer`. This trait is implemented on the SemiFungibleToken contract.
-pub trait SemiFungibleTokenResolver {
-    /// Finalize an `sft_transfer_call` chain of cross-contract calls.
+/// Used when MultiTokens are transferred using `mt_transfer_call`. This is the method that's called after `mt_on_transfer`. This trait is implemented on the MultiToken contract.
+pub trait MultiTokenResolver {
+    /// Finalize an `mt_transfer_call` chain of cross-contract calls.
     ///
-    /// The `sft_transfer_call` process:
+    /// The `mt_transfer_call` process:
     ///
-    /// 1. Sender calls `sft_transfer_call` on SemiFungibleToken contract
-    /// 2. SemiFungibleToken contract transfers token from sender to receiver
-    /// 3. SemiFungibleToken contract calls `sft_on_transfer` on receiver contract
+    /// 1. Sender calls `mt_transfer_call` on MultiToken contract
+    /// 2. MultiToken contract transfers token from sender to receiver
+    /// 3. MultiToken contract calls `mt_on_transfer` on receiver contract
     /// 4+. [receiver contract may make other cross-contract calls]
-    /// N. SemiFungibleToken contract resolves promise chain with `sft_resolve_transfer`, and may
+    /// N. MultiToken contract resolves promise chain with `mt_resolve_transfer`, and may
     ///    transfer token back to sender
     ///
     /// Requirements:
@@ -396,15 +395,15 @@ pub trait SemiFungibleTokenResolver {
     ///   `sender_id`
     ///
     /// Arguments:
-    /// * `previous_owner_id`: the owner prior to the call to `sft_transfer_call`
-    /// * `receiver_id`: the `receiver_id` argument given to `sft_transfer_call`
-    /// * `token_ids`: the `token_ids` argument given to `sft_transfer_call`
+    /// * `previous_owner_id`: the owner prior to the call to `mt_transfer_call`
+    /// * `receiver_id`: the `receiver_id` argument given to `mt_transfer_call`
+    /// * `token_ids`: the `token_ids` argument given to `mt_transfer_call`
     /// * `approvals`: if using Approval Management, contract MUST provide
     ///   set of original approved accounts in this argument, and restore these
     ///   approved accounts in case of revert. In this case it may be multiple sets of approvals
     ///
     /// Returns true if tokens were successfully transferred to `receiver_id`.
-    fn sft_resolve_transfer(
+    fn mt_resolve_transfer(
         &mut self,
         sender_id: AccountId,
         receiver_id: AccountId,
@@ -466,7 +465,7 @@ pub trait StorageManagement {
 
 ### Metadata Trait
 ```
-pub struct SemiFungibleTokenMetadata {
+pub struct MultiTokenMetadata {
     pub spec: String,              // required, essentially a version like "nft-1.0.0"
     pub name: String,              // required, ex. "Mosaics"
     pub symbol: String,            // required, ex. "MOSIAC"
@@ -477,8 +476,8 @@ pub struct SemiFungibleTokenMetadata {
     pub reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
 }
 /// Offers details on the contract-level metadata.
-pub trait SemiFungibleTokenMetadataProvider {
-    fn sft_metadata(&self) -> SemiFungibleTokenMetadata;
+pub trait MultiTokenMetadataProvider {
+    fn mt_metadata(&self) -> MultiTokenMetadata;
 }
 ```
 
