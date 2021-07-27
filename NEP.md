@@ -1,4 +1,4 @@
-- Proposal Name: multi-token
+- Proposal Name: multi-token-standard
 - Start Date: 2021/07/24
 
 # Summary
@@ -499,8 +499,8 @@ pub trait MultiTokenMetadataProvider {
 ```
 # Drawbacks
 [drawbacks]: #drawbacks
-We would not do this would be because we already have the FT and the NFT standards. There is some additional complexity
-in ux, when considering batch size request and gas limitations. 
+Doing this adds another spec and codebase to the standards. It could be seen that we could leave this to developers to implement custom solutions and have them create a token that just uses FT and NFT together. There is some additional complexity
+in ux, when considering batch size request and gas limitations, that might trip some developers up. 
 
 # Rationale and alternatives
 [rationale-and-alternatives]: #rationale-and-alternatives
@@ -517,11 +517,16 @@ and weak ecosystem. Where every developer would not be able to reliably trade th
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
 The unresolved questions, are really what type of metadata , is required for this spec?
+
 Can we represent events in this spec, which would improve the ecosystem quite a bit? If we represent events what should those events be?
+
 Should we have a spec for TokenType?
+
 Should we have a spec for offchain metadata?
+
 Does the current storage management scheme work for people?
-How freeform should this token be. Right now there is a notion of supply, which is not 100% guaranteed every token has
+
+How freeform should this token be? Right now there is a notion of supply, which is not 100% guaranteed every token has
 or wants to track supply semantics. Not having supply makes everything more difficult and requires consumers of the contract
 to track minting and burning events.
 
@@ -530,5 +535,4 @@ Approval Management is probably out of the scope of this solution.
 
 # Future possibilities
 [future-possibilities]: #future-possibilities
-Future possibilities are enumeration extension, an off chain data spec, indexing specifications
-log error status codes
+Future possibilities could be around enumeration extension like for the NFT spec, an off chain data spec, approval management if it's required, and error status codes.
