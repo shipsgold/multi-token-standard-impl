@@ -475,50 +475,60 @@ pub struct MultiTokenMetadata {
     pub reference: Option<String>, // URL to a JSON file with more info
     pub reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
 }
-/// Offers details on the contract-level metadata.
+
+pub struct MultiTokenExtraMetadata {
+    pub title: Option<String>, // ex. "Arch Nemesis: Mail Carrier" or "Parcel #5055"
+    pub description: Option<String>, // free-form description
+    pub media: Option<String>, // URL to associated media, preferably to decentralized, content-addressed storage
+    pub media_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of content referenced by the `media` field. Required if `media` is included.
+    pub copies: Option<u64>, // number of copies of this set of metadata in existence when token was minted.
+    pub issued_at: Option<String>, // ISO 8601 datetime when token was issued or minted
+    pub expires_at: Option<String>, // ISO 8601 datetime when token expires
+    pub starts_at: Option<String>, // ISO 8601 datetime when token starts being valid
+    pub updated_at: Option<String>, // ISO 8601 datetime when token was last updated
+    pub extra: Option<String>, // anything extra the NFT wants to store on-chain. Can be stringified JSON.
+    pub reference: Option<String>, // URL to an off-chain JSON file with more info.
+    pub reference_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
+}
+
+/// Offers details on the  metadata.
 pub trait MultiTokenMetadataProvider {
-    fn mt_metadata(&self) -> MultiTokenMetadata;
+    fn mt_metadata(&self, token_id: TokenId) -> MultiTokenMetadata;
+    fn mt_extra_metadata(&self, token_id: TokenId) -> MultiTokenMetadataExtra;
 }
 ```
-
-
-
 # Drawbacks
 [drawbacks]: #drawbacks
-
-Why should we *not* do this?
+We would not do this would be because we already have the FT and the NFT standards. There is some additional complexity
+in ux, when considering batch size request and gas limitations. 
 
 # Rationale and alternatives
 [rationale-and-alternatives]: #rationale-and-alternatives
+The rationale for this design, is that we want to support developers that need batch requests. In many ecosystems, a single NFT or 
+series of NFT are not sufficient for representing and managing potentially 100s of tokens. Managing cross contract calls and the token contracts themselves become a huge burden on the developer. This will reduce the complexity, and allow developers to easily bridge over to other contracts like ERC-1155 on other chains that allow for a this style of representation.
 
-- Why is this design the best in the space of possible designs?
-- What other designs have been considered and what is the rationale for not choosing them?
-- What is the impact of not doing this?
+In the design phase it was considered to simply rely on the underlying implementations of fungible tokens and non-fungible tokens
+to be the scope of interaction with the chain. Doing this we would have tied the implementations to the bounds of FT and NFT. By loosing this up a bit, we are able to be a bit more flexible in what's possible.
+
+Not doing this means we really won't have a great way of supporting use cases where developers need to represent and manage
+large varying quantities and types of tokens. They will all have to implement it on their own, and that would make for a fragmented
+and weak ecosystem. Where every developer would not be able to reliably trade these assets.
 
 # Unresolved questions
 [unresolved-questions]: #unresolved-questions
+The unresolved questions, are really what type of metadata , is required for this spec?
+Can we represent events in this spec, which would improve the ecosystem quite a bit? If we represent events what should those events be?
+Should we have a spec for TokenType?
+Should we have a spec for offchain metadata?
+Does the current storage management scheme work for people?
+How freeform should this token be. Right now there is a notion of supply, which is not 100% guaranteed every token has
+or wants to track supply semantics. Not having supply makes everything more difficult and requires consumers of the contract
+to track minting and burning events.
 
-- What parts of the design do you expect to resolve through the NEP process before this gets merged?
-- What parts of the design do you expect to resolve through the implementation of this feature before stabilization?
-- What related issues do you consider out of scope for this NEP that could be addressed in the future independently of the solution that comes out of this NEP?
+Approval Management is probably out of the scope of this solution.
+
 
 # Future possibilities
 [future-possibilities]: #future-possibilities
-
-Think about what the natural extension and evolution of your proposal would
-be and how it would affect the project as a whole in a holistic
-way. Try to use this section as a tool to more fully consider all possible
-interactions with the project in your proposal.
-Also consider how the this all fits into the roadmap for the project
-and of the relevant sub-team.
-
-This is also a good place to "dump ideas", if they are out of scope for the
-NEP you are writing but otherwise related.
-
-If you have tried and cannot think of any future possibilities,
-you may simply state that you cannot think of anything.
-
-Note that having something written down in the future-possibilities section
-is not a reason to accept the current or a future NEP. Such notes should be
-in the section on motivation or rationale in this or subsequent NEPs.
-The section merely provides additional information.
+Future possibilities are enumeration extension, an off chain data spec, indexing specifications
+log error status codes
