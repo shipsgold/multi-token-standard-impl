@@ -11,11 +11,11 @@ use token_receiver::TokenReceiverContract;
 
 // Load in contract bytes at runtime
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
-    SFT_WASM_BYTES => "res/multi_token.wasm",
+    MT_WASM_BYTES => "res/multi_token.wasm",
     TOKEN_RECEIVER_WASM_BYTES => "res/token_receiver.wasm",
 }
 
-pub const SFT_ID: &str = "mt";
+pub const MT_ID: &str = "mt";
 const TOKEN_RECEIVER_ID: &str = "token-receiver";
 // TODO: how to export String instead of &str? Way too much `into`/`to_string` with &str.
 pub const NFT_TOKEN_ID: &str = "1";
@@ -66,9 +66,9 @@ pub fn init(
         // Contract Proxy
         contract: MtContract,
         // Contract account id
-        contract_id: SFT_ID,
+        contract_id: MT_ID,
         // Bytes of contract
-        bytes: &SFT_WASM_BYTES,
+        bytes: &MT_WASM_BYTES,
         // User deploying the contract,
         signer_account: root,
         // init method

@@ -11,7 +11,7 @@ use multi_token_standard::TokenId;
 
 const BASE_GAS: u64 = 5_000_000_000_000;
 const PROMISE_CALL: u64 = 5_000_000_000_000;
-const GAS_FOR_SFT_ON_TRANSFER: Gas = BASE_GAS + PROMISE_CALL;
+const GAS_FOR_MT_ON_TRANSFER: Gas = BASE_GAS + PROMISE_CALL;
 
 const NO_DEPOSIT: Balance = 0;
 
@@ -82,7 +82,7 @@ impl MultiTokenReceiver for TokenReceiver {
                     true,
                     &account_id,
                     NO_DEPOSIT,
-                    prepaid_gas - GAS_FOR_SFT_ON_TRANSFER,
+                    prepaid_gas - GAS_FOR_MT_ON_TRANSFER,
                 )
                 .into()
             }
@@ -94,7 +94,7 @@ impl MultiTokenReceiver for TokenReceiver {
                     false,
                     &account_id,
                     NO_DEPOSIT,
-                    prepaid_gas - GAS_FOR_SFT_ON_TRANSFER,
+                    prepaid_gas - GAS_FOR_MT_ON_TRANSFER,
                 )
                 .into()
             }
