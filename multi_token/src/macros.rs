@@ -114,3 +114,66 @@ macro_rules! impl_multi_token_core_with_minter {
         }
     };
 }
+
+/// Ensures that when mt token storage grows by collections adding entries,
+/// the storage is be paid by the caller. This ensures that storage cannot grow to a point
+/// that the MT contract runs out of Ⓝ.
+/// Takes name of the Contract struct, the inner field for the token and optional method name to
+/// call when the account was closed.
+#[macro_export]
+macro_rules! impl_multi_token_storage {
+    ($contract: ident, $token: ident $(, $on_account_closed_fn:ident)?) => {
+        use $crate::storage_management::{
+            StorageManagement, StorageBalance, StorageBalanceBounds
+        };
+
+        #[near_bindgen]
+        impl StorageManagement for $contract {
+            #[payable]
+            fn storage_deposit(
+                &mut self,
+                token_ids: Vec<TokenId>,
+                account_id: Option<AccountId>,
+                registration_only: Option<bool>,
+            ) -> StorageBalance {
+                self.$token.storage_deposit(token_ids, account_id, registration_only)
+            }
+            #[payable]
+            fn storage_withdraw(&mut self, token_ids:Vec<TokenId>, amount: Option<U128>) -> StorageBalance {
+                self.$token.storage_withdraw(token_ids, amount)
+            }
+
+            #[payable]
+            fn storage_unregister(&mut self, token_ids: Vec<TokenId>, force: Option<bool>) -> Vec<bool> {
+               #[allow(unused_variables)]
+               let final_states = self.$token.internal_storage_unregister_batch(token_ids, force);
+                final_states.iter().map(|final_state|{
+                        if let Some((account_id,balance)) = final_state {
+                            $(self.$on_account_closed_fn(account_id, balance);)?
+                            true
+                        }else {
+                            false
+                        }
+                    }).collect()
+            }
+
+            //TODO should use an internal method to avoid copy
+            fn storage_balance_bounds(&self, token_id: TokenId, account_id: Option<AccountId>) -> StorageBalanceBounds {
+                self.$token.storage_balance_bounds(token_id, account_id)
+            }
+
+            //TODO should use an internal method to avoid copy
+            fn storage_balance_bounds_batch(&self, token_ids: Vec<TokenId>, account_id: Option<AccountId>) -> StorageBalanceBounds {
+                self.$token.storage_balance_bounds_batch(token_ids, account_id)
+            }
+
+            fn storage_balance_of(&self, token_id:TokenId, account_id: AccountId) -> Option<StorageBalance> {
+                self.$token.internal_storage_balance_of(token_id, &account_id)
+            }
+
+            fn storage_balance_of_batch(&self, token_ids: Vec<TokenId>, account_id: AccountId) -> Option<StorageBalance> {
+                self.$token.internal_storage_balance_of_batch(&token_ids, &account_id)
+            }
+        }
+    };
+}

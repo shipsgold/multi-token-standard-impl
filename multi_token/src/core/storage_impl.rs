@@ -45,40 +45,47 @@ impl MultiToken {
     force: Option<bool>,
   ) -> Vec<Option<(AccountId, Balance)>> {
     assert_one_yocto();
-    token_ids.iter().map(|token_id| {
-      self.internal_storage_unregister(token_id.clone(),force)
-    }).collect()
+    token_ids
+      .iter()
+      .map(|token_id| self.internal_storage_unregister(token_id.clone(), force))
+      .collect()
   }
 
-  fn internal_storage_balance_of(&self, token_id:TokenId, account_id: &AccountId) -> Option<StorageBalance> {
-    let token_type = self.token_type_index.get(&token_id).unwrap_or_else(||{ panic!("Could not find token_id {}", token_id)});
-    if  token_type == TokenType::Nft {
-      return None
+  pub fn internal_storage_balance_of(
+    &self,
+    token_id: TokenId,
+    account_id: &AccountId,
+  ) -> Option<StorageBalance> {
+    let token_type = self
+      .token_type_index
+      .get(&token_id)
+      .unwrap_or_else(|| panic!("Could not find token_id {}", token_id));
+    if token_type == TokenType::Nft {
+      return None;
     }
     let min_storage = self.storage_balance_bounds(token_id.clone(), None).min;
-    if self.ft_owners_by_id.get(&token_id).unwrap().contains_key(account_id){
+    if self.ft_owners_by_id.get(&token_id).unwrap().contains_key(account_id) {
       Some(StorageBalance { total: min_storage, available: 0.into() })
-    }else {
+    } else {
       None
     }
   }
 
-  fn internal_storage_balance_of_batch(&self, token_ids: &Vec<TokenId>, account_id: &AccountId) -> Option<StorageBalance> {
-    let mut total:u128 = 0;
-    token_ids.iter().for_each(|token_id|{
-      match self.internal_storage_balance_of(token_id.clone(), account_id) {
-        Some(balance) => {
-          total += u128::from(balance.total);
-        }
-        None => {
-          ();
-        }
+  pub fn internal_storage_balance_of_batch(
+    &self,
+    token_ids: &Vec<TokenId>,
+    account_id: &AccountId,
+  ) -> Option<StorageBalance> {
+    let mut total: u128 = 0;
+    token_ids.iter().for_each(|token_id| {
+      if let Some(balance) = self.internal_storage_balance_of(token_id.clone(), account_id) {
+        total += u128::from(balance.total);
       };
     });
     if total == 0 {
       return None;
     }
-    Some(StorageBalance{ total: total.into(), available: 0.into()})
+    Some(StorageBalance { total: total.into(), available: 0.into() })
   }
 }
 
@@ -94,11 +101,12 @@ impl StorageManagement for MultiToken {
   ) -> StorageBalance {
     let amount: Balance = env::attached_deposit();
     let account_id = account_id.unwrap_or_else(env::predecessor_account_id);
-    let min_balance = self.storage_balance_bounds_batch(token_ids.clone(), Some(account_id.clone())).min.0;
+    let min_balance =
+      self.storage_balance_bounds_batch(token_ids.clone(), Some(account_id.clone())).min.0;
     if amount < min_balance {
       env::panic(b"The attached deposit is less than the minimum storage balance");
     }
-    token_ids.iter().for_each(|token_id|{
+    token_ids.iter().for_each(|token_id| {
       self.internal_register_account(token_id.clone(), &account_id);
     });
     let refund = amount - min_balance;
@@ -117,7 +125,9 @@ impl StorageManagement for MultiToken {
   fn storage_withdraw(&mut self, token_ids: Vec<TokenId>, amount: Option<U128>) -> StorageBalance {
     assert_one_yocto();
     let predecessor_account_id = env::predecessor_account_id();
-    if let Some(storage_balance) = self.internal_storage_balance_of_batch(&token_ids, &predecessor_account_id) {
+    if let Some(storage_balance) =
+      self.internal_storage_balance_of_batch(&token_ids, &predecessor_account_id)
+    {
       match amount {
         Some(amount) if amount.0 > 0 => {
           env::panic(b"The amount is greater than the available storage balance");
@@ -130,9 +140,10 @@ impl StorageManagement for MultiToken {
   }
 
   fn storage_unregister(&mut self, token_ids: Vec<TokenId>, force: Option<bool>) -> Vec<bool> {
-    token_ids.iter().map(|token_id|{
-      self.internal_storage_unregister(token_id.clone(),force).is_some()
-    }).collect()
+    token_ids
+      .iter()
+      .map(|token_id| self.internal_storage_unregister(token_id.clone(), force).is_some())
+      .collect()
   }
   // Storage requirements for TokenIds associated with NFT times are waved
   // as the cost of storage is handled at minting
