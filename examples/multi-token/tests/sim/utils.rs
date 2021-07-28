@@ -1,13 +1,11 @@
+use multi_token::ContractContract as MtContract;
+use multi_token_standard::metadata::{MultiTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
+use multi_token_standard::{TokenId, TokenType};
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
 use near_sdk::AccountId;
 use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount};
 use rand::prelude::*;
-use multi_token::ContractContract as MtContract;
-use multi_token_standard::metadata::{
-    MultiTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC,
-};
-use multi_token_standard::{TokenId, TokenType};
 use token_receiver::TokenReceiverContract;
 
 // Load in contract bytes at runtime
@@ -60,7 +58,7 @@ pub fn register_user(user: &near_sdk_sim::UserAccount, token_ids: &Vec<TokenId>)
         MT_ID.to_string(),
         "storage_deposit",
         &json!({
-            "token_ids": token_ids, 
+            "token_ids": token_ids,
             "account_id": user.account_id()
         })
         .to_string()
@@ -95,7 +93,6 @@ pub fn init(
             root.valid_account_id()
         )
     );
-
 
     let alice = root.create_user("alice".to_string(), to_yocto("100"));
 
@@ -144,9 +141,7 @@ pub fn init(
     (root, mt, alice, token_receiver)
 }
 
-pub fn init_batch() {
-
-}
+pub fn init_batch() {}
 
 pub fn helper_mint(
     token_id: TokenId,

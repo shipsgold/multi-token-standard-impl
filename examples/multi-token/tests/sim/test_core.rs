@@ -31,8 +31,7 @@ fn simulate_simple_transfer_nft() {
 #[test]
 fn simulate_simple_transfer_ft() {
     let (root, mt, alice, _) = init();
-    let ft_amount: U128 =
-        view!(mt.balance_of(root.account_id(), FT_TOKEN_ID.into())).unwrap_json();
+    let ft_amount: U128 = view!(mt.balance_of(root.account_id(), FT_TOKEN_ID.into())).unwrap_json();
     assert_eq!(ft_amount.0, 100);
 
     call!(
@@ -78,8 +77,7 @@ fn simulate_simple_transfer_batch() {
     assert_eq!(remaining_amount.0, 25);
 
     remaining_amount = view!(mt.balance_of(root.account_id(), NFT_TOKEN_ID.into())).unwrap_json();
-    transfered_amount =
-        view!(mt.balance_of(alice.account_id(), NFT_TOKEN_ID.into())).unwrap_json();
+    transfered_amount = view!(mt.balance_of(alice.account_id(), NFT_TOKEN_ID.into())).unwrap_json();
     assert_eq!(transfered_amount.0, 1);
     assert_eq!(remaining_amount.0, 0);
 }
