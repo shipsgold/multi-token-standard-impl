@@ -62,4 +62,4 @@ impl Contract {
   }
 }
 multi_token_standard::impl_multi_token_core_with_minter!(Contract, token);
-//multi_token_standard::impl_multi_token_minter!(Contract, token);
+multi_token_standard::impl_multi_token_storage!(Contract, token);

@@ -1,4 +1,5 @@
 use near_sdk::json_types::U128;
+use near_sdk::serde_json::json;
 use near_sdk::AccountId;
 use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount};
 use rand::prelude::*;
@@ -52,6 +53,24 @@ pub fn generate_random_token_tuples(
     }
     (token_ids, token_types, amounts, metadatas)
 }
+
+// Register the given `user` with a set of token_ids
+pub fn register_user(user: &near_sdk_sim::UserAccount, token_ids: &Vec<TokenId>) {
+    user.call(
+        MT_ID.to_string(),
+        "storage_deposit",
+        &json!({
+            "token_ids": token_ids, 
+            "account_id": user.account_id()
+        })
+        .to_string()
+        .into_bytes(),
+        near_sdk_sim::DEFAULT_GAS / 2,
+        near_sdk::env::storage_byte_cost() * 700, // attached deposit
+    )
+    .assert_success();
+}
+
 /// Initialize simulator and return:
 /// * root: the root user, set as owner_id for NFT contract, owns a token with ID=1
 /// * nft: the NFT contract, callable with `call!` and `view!`
@@ -76,6 +95,7 @@ pub fn init(
             root.valid_account_id()
         )
     );
+
 
     let alice = root.create_user("alice".to_string(), to_yocto("100"));
 
@@ -120,7 +140,7 @@ pub fn init(
         ),
         deposit = 7000000000000000000000
     );
-
+    register_user(&alice, &vec![FT_TOKEN_ID.to_string()]);
     (root, mt, alice, token_receiver)
 }
 

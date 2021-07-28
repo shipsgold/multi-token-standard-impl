@@ -69,6 +69,7 @@ fn simulate_simple_transfer_batch() {
         deposit = 1
     )
     .assert_success();
+
     let mut remaining_amount: U128 =
         view!(mt.balance_of(root.account_id(), FT_TOKEN_ID.into())).unwrap_json();
     let mut transfered_amount: U128 =
