@@ -4,7 +4,7 @@ use multi_token_standard::{TokenId, TokenType};
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
 use near_sdk::AccountId;
-use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount};
+use near_sdk_sim::{call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount, view};
 use rand::prelude::*;
 use token_receiver::TokenReceiverContract;
 
@@ -53,13 +53,13 @@ pub fn generate_random_token_tuples(
 }
 
 // Register the given `user` with a set of token_ids
-pub fn register_user(user: &near_sdk_sim::UserAccount, token_ids: &Vec<TokenId>) {
+pub fn register_user(user: &near_sdk_sim::UserAccount, acct_id: AccountId, token_ids: &Vec<TokenId>) {
     user.call(
         MT_ID.to_string(),
         "storage_deposit",
         &json!({
             "token_ids": token_ids,
-            "account_id": user.account_id()
+            "account_id": acct_id 
         })
         .to_string()
         .into_bytes(),
@@ -137,8 +137,19 @@ pub fn init(
         ),
         deposit = 7000000000000000000000
     );
-    register_user(&alice, &vec![FT_TOKEN_ID.to_string()]);
+    register_user(&alice, alice.account_id(), &vec![FT_TOKEN_ID.to_string()]);
+    register_user(&root, token_receiver.account_id(), &vec![FT_TOKEN_ID.to_string()]);
     (root, mt, alice, token_receiver)
+}
+
+pub fn check_balance(
+    mt: &ContractAccount<MtContract>,
+    account_id: AccountId,
+    token_id: TokenId,
+    expected_amt: u128,
+) {
+    let amount: U128 = view!(mt.balance_of(account_id, token_id)).unwrap_json();
+    assert_eq!(amount.0, expected_amt);
 }
 
 pub fn init_batch() {}
