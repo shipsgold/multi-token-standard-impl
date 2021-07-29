@@ -1,13 +1,13 @@
 /*!
 A stub contract that implements mt_on_transfer for simulation testing mt_transfer_call.
 */
+use multi_token_standard::core::MultiTokenReceiver;
+use multi_token_standard::TokenId;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
 use near_sdk::{
     env, ext_contract, log, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, PromiseOrValue,
 };
-use multi_token_standard::core::MultiTokenReceiver;
-use multi_token_standard::TokenId;
 
 const BASE_GAS: u64 = 5_000_000_000_000;
 const PROMISE_CALL: u64 = 5_000_000_000_000;
@@ -57,41 +57,33 @@ impl MultiTokenReceiver for TokenReceiver {
         amounts: Vec<U128>,
         msg: String,
     ) -> PromiseOrValue<Vec<U128>> {
-        PromiseOrValue::Value(amounts)
-    }
-    // Verifying that we were called by non-fungible token contract that we expect.
-    /*
+        log!("in mt_on_transfer; sender_id={}, token_id={:?}, msg={}", &sender_id, &token_ids, msg);
+        // Verifying that we were called by non-fungible token contract that we expect.
         assert_eq!(
             &env::predecessor_account_id(),
             &self.multi_token_account_id,
             "Only supports the one semi-fungible token contract"
         );
-        log!(
-            "in mt_on_transfer; sender_id={}, previous_owner_id={}, token_id={}, msg={}",
-            &sender_id,
-            &previous_owner_id,
-            &token_id,
-            msg
-        );
+        log!("in mt_on_transfer; sender_id={}, token_id={:?}, msg={}", &sender_id, &token_ids, msg);
         match msg.as_str() {
-            "return-it-now" => PromiseOrValue::Value(true),
+            "return-it-now" => PromiseOrValue::Value(amounts),
             "return-it-later" => {
                 let prepaid_gas = env::prepaid_gas();
                 let account_id = env::current_account_id();
                 ext_self::ok_go(
-                    true,
+                    amounts,
                     &account_id,
                     NO_DEPOSIT,
                     prepaid_gas - GAS_FOR_MT_ON_TRANSFER,
                 )
                 .into()
             }
-            "keep-it-now" => PromiseOrValue::Value(false),
+            "keep-it-now" => PromiseOrValue::Value(vec![0.into(); amounts.len()]),
             "keep-it-later" => {
                 let prepaid_gas = env::prepaid_gas();
                 let account_id = env::current_account_id();
                 ext_self::ok_go(
-                    false,
+                    vec![0.into(); amounts.len()],
                     &account_id,
                     NO_DEPOSIT,
                     prepaid_gas - GAS_FOR_MT_ON_TRANSFER,
@@ -100,7 +92,7 @@ impl MultiTokenReceiver for TokenReceiver {
             }
             _ => env::panic(b"unsupported msg"),
         }
-    }*/
+    }
 }
 
 #[near_bindgen]
