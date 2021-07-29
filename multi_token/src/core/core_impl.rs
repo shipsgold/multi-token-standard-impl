@@ -120,6 +120,8 @@ impl MultiToken {
 		self.ft_prefix_index += 1;
 	}
 
+	
+
 	fn measure_min_ft_token_storage_cost(&mut self) {
 		let initial_storage_usage = env::storage_usage();
 
@@ -131,7 +133,6 @@ impl MultiToken {
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
 		let tmp_owner_id = "a".repeat(64);
 		let tmp_supply: u128 = 9999;
-		self.ft_token_supply_by_id.insert(&tmp_token_id, &tmp_supply);
 		tmp_balance_lookup.insert(&tmp_owner_id, &tmp_supply);
 		self.ft_owners_by_id.insert(&tmp_token_id, &tmp_balance_lookup);
 
@@ -140,10 +141,6 @@ impl MultiToken {
 
 		// 3. roll it all back
 		self.ft_owners_by_id.remove(&tmp_token_id);
-		// TODO bug this does not belong here the calculation is wrong
-		// it over counts storage requirement for users this is also required
-		// if NFT type tokens want to have a supply
-		self.ft_token_supply_by_id.remove(&tmp_token_id);
 	}
 
 	fn measure_min_nft_token_storage_cost(&mut self) {
