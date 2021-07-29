@@ -25,7 +25,7 @@ trait MultiTokenResolver {
 		receiver_id: AccountId,
 		token_ids: Vec<TokenId>,
 		amounts: Vec<U128>,
-	) -> bool;
+	) -> Vec<U128>;
 }
 
 #[ext_contract(ext_receiver)]
@@ -140,6 +140,10 @@ impl MultiToken {
 
 		// 3. roll it all back
 		self.ft_owners_by_id.remove(&tmp_token_id);
+		// TODO bug this does not belong here the calculation is wrong
+		// it over counts storage requirement for users this is also required
+		// if NFT type tokens want to have a supply
+		self.ft_token_supply_by_id.remove(&tmp_token_id);
 	}
 
 	fn measure_min_nft_token_storage_cost(&mut self) {
@@ -187,12 +191,13 @@ impl MultiToken {
 		#[allow(clippy::ptr_arg)] token_id: &TokenId,
 		account_id: &AccountId,
 	) -> Balance {
-		match self.ft_owners_by_id.get(token_id) {
-			Some(balances) => balances
-				.get(account_id)
-				.unwrap_or_else(|| panic!("The account_id {} not found", account_id)),
-			None => env::panic(format!("The token_id {} is not valid", token_id).as_bytes()),
-		}
+		let balances = self
+			.ft_owners_by_id
+			.get(token_id)
+			.unwrap_or_else(|| env::panic(format!("Token id is not valid {}", token_id).as_bytes()));
+		balances.get(account_id).unwrap_or_else(|| {
+			env::panic(format!("The account_id {} is not found", account_id).as_bytes())
+		})
 	}
 
 	pub fn internal_deposit(
@@ -392,6 +397,12 @@ impl MultiTokenCore for MultiToken {
 		assert_one_yocto();
 		let sender_id = env::predecessor_account_id();
 		self.internal_transfer_batch(&sender_id, &receiver_id, &token_ids, &amounts, memo);
+		log!(
+			"Transfering data to:{} from sender: {}, p_gas: {}",
+			receiver_id,
+			sender_id,
+			env::prepaid_gas()
+		);
 		// TODO make this efficient
 		ext_receiver::mt_on_transfer(
 			sender_id.clone(),
@@ -400,7 +411,7 @@ impl MultiTokenCore for MultiToken {
 			msg,
 			&receiver_id,
 			NO_DEPOSIT,
-			env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
+			25_000_000_000_000,
 		)
 		.then(ext_self::mt_resolve_transfer(
 			sender_id,
@@ -409,7 +420,8 @@ impl MultiTokenCore for MultiToken {
 			amounts,
 			&env::current_account_id(),
 			NO_DEPOSIT,
-			GAS_FOR_RESOLVE_TRANSFER,
+			5_000_000_000_000,
+			//GAS_FOR_RESOLVE_TRANSFER,
 		))
 		.into()
 	}
