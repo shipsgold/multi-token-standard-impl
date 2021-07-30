@@ -6,6 +6,7 @@ TBA
 ### Background
 We're going to discuss the NEP for Multi Token Standard, and go over the interfaces to see if we're all on the same page. Time permitting we will talk 
 a little bit about implementation. 
+
 [Nep Issue](https://github.com/near/NEPs/issues/246)
 
 [NEP](https://github.com/near/NEPs/pull/245)
