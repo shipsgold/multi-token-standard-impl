@@ -1,5 +1,5 @@
 use multi_token::ContractContract as MtContract;
-use multi_token_standard::metadata::{MultiTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
+use multi_token_standard::metadata::{MultiTokenMetadata, MT_METADATA_SPEC};
 use multi_token_standard::{TokenId, TokenType};
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
@@ -41,7 +41,7 @@ pub fn generate_random_token_tuples(
             Some(MultiTokenMetadata {
                 reference: Some("/some/uri/reference/{id}_token.json".into()),
                 reference_hash: None,
-                spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string(),
+                spec: MT_METADATA_SPEC.to_string(),
             })
         } else {
             None
@@ -116,7 +116,7 @@ pub fn init(
             Some(MultiTokenMetadata {
                 reference: Some("/some/uri/reference/{id}_token.json".into()),
                 reference_hash: None,
-                spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string()
+                spec: MT_METADATA_SPEC.to_string()
             })
         ),
         deposit = 7000000000000000000000
@@ -132,7 +132,7 @@ pub fn init(
             Some(MultiTokenMetadata {
                 reference: Some("/some/uri/reference/ft/{id}_token.json".into()),
                 reference_hash: None,
-                spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string()
+                spec: MT_METADATA_SPEC.to_string()
             })
         ),
         deposit = 7000000000000000000000

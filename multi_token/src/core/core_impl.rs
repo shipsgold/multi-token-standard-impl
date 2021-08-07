@@ -1,7 +1,7 @@
 use crate::core::MultiTokenCore;
 use crate::core::MultiTokenMinter;
 use crate::core::MultiTokenResolver;
-use crate::metadata::{MultiTokenMetadata, SEMI_FUNGIBLE_METADATA_SPEC};
+use crate::metadata::{MultiTokenMetadata, MT_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
 use crate::utils::refund_deposit;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -154,9 +154,13 @@ impl MultiToken {
 			token_metadata_by_id.insert(
 				&tmp_token_id,
 				&MultiTokenMetadata {
-					spec: SEMI_FUNGIBLE_METADATA_SPEC.to_string(),
+					name: "a".repeat(64),
+					symbol: "a".repeat(64),
+					spec: MT_METADATA_SPEC.to_string(),
+					icon: None,
+					base_uri: None,
 					reference: None,
-					reference_hash: None,
+					reference_hash: None
 				},
 			);
 		}
