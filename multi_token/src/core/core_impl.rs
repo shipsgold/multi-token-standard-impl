@@ -159,6 +159,7 @@ impl MultiToken {
 					spec: MT_METADATA_SPEC.to_string(),
 					icon: None,
 					base_uri: None,
+					decimals: None,
 					reference: None,
 					reference_hash: None
 				},
