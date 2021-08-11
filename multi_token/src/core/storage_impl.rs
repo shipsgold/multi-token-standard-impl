@@ -79,7 +79,7 @@ impl MultiToken {
     }
   }
 
-  fn internal_storage_balance_bounds_batch(
+  pub fn internal_storage_balance_bounds_batch(
     &self,
     token_ids: &[TokenId],
     account_id: Option<AccountId>,

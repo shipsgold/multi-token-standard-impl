@@ -157,21 +157,11 @@ macro_rules! impl_multi_token_storage {
                     }).collect()
             }
 
-            //TODO should use an internal method to avoid copy
-            fn storage_balance_bounds(&self, token_id: TokenId, account_id: Option<AccountId>) -> StorageBalanceBounds {
-                self.$token.storage_balance_bounds(token_id, account_id)
+            fn storage_balance_bounds(&self, token_ids: Vec<TokenId>, account_id: Option<AccountId>) -> StorageBalanceBounds {
+                self.$token.internal_storage_balance_bounds_batch(&token_ids, account_id)
             }
 
-            //TODO should use an internal method to avoid copy
-            fn storage_balance_bounds_batch(&self, token_ids: Vec<TokenId>, account_id: Option<AccountId>) -> StorageBalanceBounds {
-                self.$token.storage_balance_bounds_batch(token_ids, account_id)
-            }
-
-            fn storage_balance_of(&self, token_id:TokenId, account_id: AccountId) -> Option<StorageBalance> {
-                self.$token.internal_storage_balance_of(token_id, &account_id)
-            }
-
-            fn storage_balance_of_batch(&self, token_ids: Vec<TokenId>, account_id: AccountId) -> Option<StorageBalance> {
+            fn storage_balance_of(&self, token_ids: Vec<TokenId>, account_id: AccountId) -> Option<StorageBalance> {
                 self.$token.internal_storage_balance_of_batch(&token_ids, &account_id)
             }
         }
