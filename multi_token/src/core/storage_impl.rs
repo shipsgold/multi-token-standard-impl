@@ -2,7 +2,7 @@ use crate::storage_management::{StorageBalance, StorageBalanceBounds, StorageMan
 use crate::MultiToken;
 use crate::{TokenId, TokenType};
 use near_sdk::json_types::U128;
-use near_sdk::{assert_one_yocto, env, log, AccountId, Balance, Promise};
+use near_sdk::{assert_one_yocto, env, AccountId, Balance, Promise};
 
 impl MultiToken {
   pub fn internal_storage_unregister(
@@ -66,8 +66,7 @@ impl MultiToken {
       return no_storage_bound;
     }
 
-    if account_id.is_some() == true {
-      let acct = account_id.unwrap();
+    if let Some(acct) = account_id {
       if self.ft_owners_by_id.get(&token_id).unwrap().get(&acct).is_some() {
         return no_storage_bound;
       }
@@ -82,24 +81,19 @@ impl MultiToken {
 
   fn internal_storage_balance_bounds_batch(
     &self,
-    token_ids: &Vec<TokenId>,
+    token_ids: &[TokenId],
     account_id: Option<AccountId>,
   ) -> StorageBalanceBounds {
-    let required_storage_balance =
-      Balance::from(self.ft_account_storage_usage) * env::storage_byte_cost();
     let mut min_storage: u128 = 0;
     let mut max_storage: u128 = 0;
 
     token_ids.iter().for_each(|token_id| {
       let bound = self.internal_storage_balance_bounds(token_id, account_id.clone());
       min_storage += u128::from(bound.min);
-      max_storage += u128::from(bound.max.unwrap_or(0.into()));
+      max_storage += u128::from(bound.max.unwrap_or_else(|| 0.into()));
     });
     StorageBalanceBounds { min: min_storage.into(), max: Some(max_storage.into()) }
   }
-
-
-
 
   pub fn internal_storage_balance_of(
     &self,
@@ -123,7 +117,7 @@ impl MultiToken {
 
   pub fn internal_storage_balance_of_batch(
     &self,
-    token_ids: &Vec<TokenId>,
+    token_ids: &[TokenId],
     account_id: &AccountId,
   ) -> Option<StorageBalance> {
     let mut total: u128 = 0;
@@ -203,15 +197,13 @@ impl StorageManagement for MultiToken {
     token_ids: Vec<TokenId>,
     account_id: Option<AccountId>,
   ) -> StorageBalanceBounds {
-    let required_storage_balance =
-      Balance::from(self.ft_account_storage_usage) * env::storage_byte_cost();
     let mut min_storage: u128 = 0;
     let mut max_storage: u128 = 0;
 
     token_ids.iter().for_each(|token_id| {
       let bound = self.internal_storage_balance_bounds(token_id, account_id.clone());
       min_storage += u128::from(bound.min);
-      max_storage += u128::from(bound.max.unwrap_or(0.into()));
+      max_storage += u128::from(bound.max.unwrap_or_else(|| 0.into()));
     });
     StorageBalanceBounds { min: min_storage.into(), max: Some(max_storage.into()) }
   }
