@@ -29,7 +29,7 @@ impl MultiToken {
       let updated_supply = self.ft_token_supply_by_id.get(&token_id).unwrap() - balance;
       self.ft_token_supply_by_id.insert(&token_id, &updated_supply);
       Promise::new(account_id.clone())
-        .transfer(self.storage_balance_bounds(token_id, None).min.0 + 1);
+        .transfer(self.internal_storage_balance_bounds(&token_id, None).min.0 + 1);
       Some((account_id, balance))
     } else {
       env::panic(b"Can't unregister the account with the positive balance without force")
@@ -51,6 +51,56 @@ impl MultiToken {
       .collect()
   }
 
+  fn internal_storage_balance_bounds(
+    &self,
+    token_id: &TokenId,
+    account_id: Option<AccountId>,
+  ) -> StorageBalanceBounds {
+    let token_type = self
+      .token_type_index
+      .get(&token_id)
+      .unwrap_or_else(|| panic!("Token id {} not found", token_id));
+    let no_storage_bound = StorageBalanceBounds { min: 0.into(), max: Some(0.into()) };
+
+    if token_type == TokenType::Nft {
+      return no_storage_bound;
+    }
+
+    if account_id.is_some() == true {
+      let acct = account_id.unwrap();
+      if self.ft_owners_by_id.get(&token_id).unwrap().get(&acct).is_some() {
+        return no_storage_bound;
+      }
+    }
+    let required_storage_balance =
+      Balance::from(self.ft_account_storage_usage) * env::storage_byte_cost();
+    StorageBalanceBounds {
+      min: required_storage_balance.into(),
+      max: Some(required_storage_balance.into()),
+    }
+  }
+
+  fn internal_storage_balance_bounds_batch(
+    &self,
+    token_ids: &Vec<TokenId>,
+    account_id: Option<AccountId>,
+  ) -> StorageBalanceBounds {
+    let required_storage_balance =
+      Balance::from(self.ft_account_storage_usage) * env::storage_byte_cost();
+    let mut min_storage: u128 = 0;
+    let mut max_storage: u128 = 0;
+
+    token_ids.iter().for_each(|token_id| {
+      let bound = self.internal_storage_balance_bounds(token_id, account_id.clone());
+      min_storage += u128::from(bound.min);
+      max_storage += u128::from(bound.max.unwrap_or(0.into()));
+    });
+    StorageBalanceBounds { min: min_storage.into(), max: Some(max_storage.into()) }
+  }
+
+
+
+
   pub fn internal_storage_balance_of(
     &self,
     token_id: TokenId,
@@ -63,7 +113,7 @@ impl MultiToken {
     if token_type == TokenType::Nft {
       return None;
     }
-    let min_storage = self.storage_balance_bounds(token_id.clone(), None).min;
+    let min_storage = self.internal_storage_balance_bounds(&token_id, None).min;
     if self.ft_owners_by_id.get(&token_id).unwrap().contains_key(account_id) {
       Some(StorageBalance { total: min_storage, available: 0.into() })
     } else {
@@ -102,7 +152,7 @@ impl StorageManagement for MultiToken {
     let amount: Balance = env::attached_deposit();
     let account_id = account_id.unwrap_or_else(env::predecessor_account_id);
     let min_balance =
-      self.storage_balance_bounds_batch(token_ids.clone(), Some(account_id.clone())).min.0;
+      self.internal_storage_balance_bounds_batch(&token_ids, Some(account_id.clone())).min.0;
     if amount < min_balance {
       env::panic(b"The attached deposit is less than the minimum storage balance");
     }
@@ -150,35 +200,6 @@ impl StorageManagement for MultiToken {
   // account_id is to ignore the cost of your account id if it exists
   fn storage_balance_bounds(
     &self,
-    token_id: TokenId,
-    account_id: Option<AccountId>,
-  ) -> StorageBalanceBounds {
-    let token_type = self
-      .token_type_index
-      .get(&token_id)
-      .unwrap_or_else(|| panic!("Token id {} not found", token_id));
-    let no_storage_bound = StorageBalanceBounds { min: 0.into(), max: Some(0.into()) };
-
-    if token_type == TokenType::Nft {
-      return no_storage_bound;
-    }
-
-    if account_id.is_some() == true {
-      let acct = account_id.unwrap();
-      if self.ft_owners_by_id.get(&token_id).unwrap().get(&acct).is_some() {
-        return no_storage_bound;
-      }
-    }
-    let required_storage_balance =
-      Balance::from(self.ft_account_storage_usage) * env::storage_byte_cost();
-    StorageBalanceBounds {
-      min: required_storage_balance.into(),
-      max: Some(required_storage_balance.into()),
-    }
-  }
-
-  fn storage_balance_bounds_batch(
-    &self,
     token_ids: Vec<TokenId>,
     account_id: Option<AccountId>,
   ) -> StorageBalanceBounds {
@@ -188,7 +209,7 @@ impl StorageManagement for MultiToken {
     let mut max_storage: u128 = 0;
 
     token_ids.iter().for_each(|token_id| {
-      let bound = self.storage_balance_bounds(token_id.into(), account_id.clone());
+      let bound = self.internal_storage_balance_bounds(token_id, account_id.clone());
       min_storage += u128::from(bound.min);
       max_storage += u128::from(bound.max.unwrap_or(0.into()));
     });
