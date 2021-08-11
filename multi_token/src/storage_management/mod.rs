@@ -59,6 +59,5 @@ pub trait StorageManagement {
     fn storage_balance_bounds(&self, token_id:TokenId, account_id: Option<AccountId>) -> StorageBalanceBounds;
     fn storage_balance_bounds_batch(&self, token_id:Vec<TokenId>, account_id: Option<AccountId>) -> StorageBalanceBounds;
 
-    fn storage_balance_of(&self, token_id:TokenId, account_id: AccountId) -> Option<StorageBalance>;
-    fn storage_balance_of_batch(&self, token_ids:Vec<TokenId>, account_id: AccountId) -> Option<StorageBalance>;
+    fn storage_balance_of(&self, token_ids:Vec<TokenId>, account_id: AccountId) -> Option<StorageBalance>;
 }

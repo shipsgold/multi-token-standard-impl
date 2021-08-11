@@ -195,11 +195,7 @@ impl StorageManagement for MultiToken {
     StorageBalanceBounds { min: min_storage.into(), max: Some(max_storage.into()) }
   }
 
-  fn storage_balance_of(&self, token_id: TokenId, account_id: AccountId) -> Option<StorageBalance> {
-    self.internal_storage_balance_of(token_id, &account_id)
-  }
-
-  fn storage_balance_of_batch(
+  fn storage_balance_of(
     &self,
     token_ids: Vec<TokenId>,
     account_id: AccountId,
