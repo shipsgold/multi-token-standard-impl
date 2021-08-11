@@ -227,9 +227,9 @@ impl MultiToken {
 		let balance = self.internal_unwrap_balance_of(token_id, account_id);
 		if let Some(new_balance) = balance.checked_sub(amount) {
 			self.ft_owners_by_id.get(token_id).unwrap().insert(&account_id, &new_balance);
-			let mut total_supply = self.ft_token_supply_by_id.get(token_id).unwrap();
-			total_supply.checked_sub(amount).expect("Total supply overflow");
-			self.ft_token_supply_by_id.insert(token_id, &total_supply);
+			let total_supply = self.ft_token_supply_by_id.get(token_id).unwrap();
+			let new_supply = total_supply.checked_sub(amount).expect("Total supply overflow");
+			self.ft_token_supply_by_id.insert(token_id, &new_supply);
 		} else {
 			env::panic(b"The account doesn't have enough balance");
 		}
