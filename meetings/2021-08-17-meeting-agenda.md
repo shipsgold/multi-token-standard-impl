@@ -11,6 +11,7 @@ we need to settle on for the implementation.
 [Nep Issue](https://github.com/near/NEPs/issues/246)
 
 [NEP](https://github.com/near/NEPs/pull/245)
+
 [Derive or macro rules! or else](https://github.com/near/near-sdk-rs/issues/422#issuecomment-844175394) 
 
 
