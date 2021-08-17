@@ -120,7 +120,6 @@ impl MultiToken {
 		self.ft_prefix_index += 1;
 	}
 
-	
 
 	fn measure_min_ft_token_storage_cost(&mut self) {
 		let initial_storage_usage = env::storage_usage();
@@ -174,6 +173,11 @@ impl MultiToken {
 		}
 
 		self.nft_owner_by_id.remove(&tmp_token_id);
+	}
+
+	pub fn internal_new_ft_balances(&mut self)-> TreeMap<AccountId, Balance> {
+		self.inc_balances_prefix();
+		TreeMap::new(self.get_balances_prefix())
 	}
 
 	pub fn internal_register_account(&mut self, token_id: TokenId, account_id: &AccountId) {
