@@ -1,4 +1,4 @@
-use crate::metadata::TokenMetadata;
+use crate::metadata::MultiTokenMetadata;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::AccountId;
@@ -22,6 +22,6 @@ pub struct Token {
     pub token_type: TokenType, 
     pub owner_id: AccountId,
     pub supply: u128,
-    pub metadata: Option<TokenMetadata>,
+    pub metadata: Option<MultiTokenMetadata>,
     pub approved_account_ids: Option<HashMap<AccountId, u64>>,
 }
