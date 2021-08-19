@@ -6,8 +6,8 @@ edition = "2018"
 
 [dev-dependencies]
 multi-token-standard = { path = "../../multi_token" }
-near-sdk = "3.1.0" 
-near-sdk-sim = "3.2.0"
+near-sdk = "4.0.0-pre.2" 
+near-sdk-sim = "4.0.0-pre.2"
 rand = "0.8.4"
 
 # remember to include a line for each contract

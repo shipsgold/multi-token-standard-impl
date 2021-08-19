@@ -198,7 +198,7 @@ impl MultiToken {
 		if token_type == TokenType::Ft
 			&& self.ft_owners_by_id.get(&token_id).unwrap().insert(&account_id, &0).is_some()
 		{
-			env::panic(b"The account is already registered");
+			env::panic_str(b"The account is already registered");
 		}
 	}
 
@@ -210,9 +210,9 @@ impl MultiToken {
 		let balances = self
 			.ft_owners_by_id
 			.get(token_id)
-			.unwrap_or_else(|| env::panic(format!("Token id is not valid {}", token_id).as_bytes()));
+			.unwrap_or_else(|| env::panic_str(format!("Token id is not valid {}", token_id).as_str()));
 		balances.get(account_id).unwrap_or_else(|| {
-			env::panic(format!("The account_id {} is not found", account_id).as_bytes())
+			env::panic_str(format!("The account_id {} is not found", account_id).as_str())
 		})
 	}
 
@@ -229,7 +229,7 @@ impl MultiToken {
 			let new_supply = total_supply.checked_add(amount).expect("Total supply overflow");
 			self.ft_token_supply_by_id.insert(token_id, &new_supply);
 		} else {
-			env::panic(b"Balance overflow");
+			env::panic_str("Balance overflow");
 		}
 	}
 
@@ -246,7 +246,7 @@ impl MultiToken {
 			let new_supply = total_supply.checked_sub(amount).expect("Total supply overflow");
 			self.ft_token_supply_by_id.insert(token_id, &new_supply);
 		} else {
-			env::panic(b"The account doesn't have enough balance");
+			env::panic_str("The account doesn't have enough balance");
 		}
 	}
 
@@ -563,7 +563,7 @@ impl MultiTokenMinter for MultiToken {
 		let initial_storage_usage = env::storage_usage();
 		assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
 		if self.token_metadata_by_id.is_some() && token_metadata.is_none() {
-			env::panic(b"Must provide metadata");
+			env::panic_str("Must provide metadata");
 		}
 
 		// Every token must have a token type and every NFT type cannot be reminted
@@ -584,7 +584,7 @@ impl MultiTokenMinter for MultiToken {
 		match token_type {
 			TokenType::Ft => {
 				if amount.is_none() {
-					env::panic(b"Amount must be specified for Ft type tokens");
+					env::panic_str("Amount must be specified for Ft type tokens");
 				}
 				// advance the prefix index before insertion
 				self.inc_balances_prefix();
