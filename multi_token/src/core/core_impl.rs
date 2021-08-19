@@ -5,7 +5,7 @@ use crate::metadata::{MultiTokenMetadata, MT_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
 use crate::utils::refund_deposit;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, TreeMap};
+use near_sdk::collections::{LookupMap};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{
 	assert_one_yocto, env, ext_contract, log, AccountId, Balance, Gas, IntoStorageKey,
@@ -61,10 +61,10 @@ pub struct MultiToken {
 	pub token_type_index: LookupMap<TokenId, TokenType>,
 
 	// always required TokenId corresponds to nft
-	pub nft_owner_by_id: TreeMap<TokenId, AccountId>,
+	pub nft_owner_by_id: LookupMap<TokenId, AccountId>,
 
 	// always required TokenId corresponds to ft
-	pub ft_owners_by_id: TreeMap<TokenId, TreeMap<AccountId, Balance>>,
+	pub ft_owners_by_id: LookupMap<TokenId, LookupMap<AccountId, Balance>>,
 
 	pub owner_prefix: Vec<u8>,
 	pub ft_prefix_index: u64,
@@ -96,8 +96,8 @@ impl MultiToken {
 			ft_token_storage_usage: 0,
 			ft_account_storage_usage: 0,
 			extra_storage_in_bytes_per_nft_token: 0,
-			ft_owners_by_id: TreeMap::new(owner_prefix.clone()),
-			nft_owner_by_id: TreeMap::new([owner_prefix, "n".into()].concat()),
+			ft_owners_by_id: LookupMap::new(owner_prefix.clone()),
+			nft_owner_by_id: LookupMap::new([owner_prefix, "n".into()].concat()),
 			token_type_index: LookupMap::new(token_type_prefix.into_storage_key()),
 			ft_prefix_index: 0,
 			ft_token_supply_by_id: LookupMap::new(supply_by_id_prefix.into_storage_key()),
@@ -125,8 +125,8 @@ impl MultiToken {
 		let initial_storage_usage = env::storage_usage();
 
 		// 1. add data to calculate space usage
-		let mut tmp_balance_lookup: TreeMap<AccountId, Balance> =
-			TreeMap::new(self.get_balances_prefix());
+		let mut tmp_balance_lookup: LookupMap<AccountId, Balance> =
+			LookupMap::new(self.get_balances_prefix());
 		self.ft_token_storage_usage = initial_storage_usage - env::storage_usage();
 		let storage_after_token_creation = env::storage_usage();
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
@@ -185,9 +185,9 @@ impl MultiToken {
 		self.nft_owner_by_id.remove(&tmp_token_id);
 	}
 
-	pub fn internal_new_ft_balances(&mut self)-> TreeMap<AccountId, Balance> {
+	pub fn internal_new_ft_balances(&mut self)-> LookupMap<AccountId, Balance> {
 		self.inc_balances_prefix();
-		TreeMap::new(self.get_balances_prefix())
+		LookupMap::new(self.get_balances_prefix())
 	}
 
 	pub fn internal_register_account(&mut self, token_id: TokenId, account_id: &AccountId) {
@@ -589,7 +589,7 @@ impl MultiTokenMinter for MultiToken {
 				// advance the prefix index before insertion
 				self.inc_balances_prefix();
 				let amt = u128::from(amount.unwrap());
-				//create TreeMap for balances
+				//create LookupMap for balances
 				match self.ft_owners_by_id.get(&token_id) {
 					Some(mut balances) => {
 						let current_bal = balances.get(&owner_id).unwrap_or(0);
@@ -602,8 +602,8 @@ impl MultiTokenMinter for MultiToken {
 						self.ft_token_supply_by_id.insert(&token_id, &(supply + amt));
 					}
 					None => {
-						let mut balances: TreeMap<AccountId, Balance> =
-							TreeMap::new(self.get_balances_prefix());
+						let mut balances: LookupMap<AccountId, Balance> =
+							LookupMap::new(self.get_balances_prefix());
 						// insert amount into balances
 						balances.insert(&owner_id, &amt);
 						self.ft_owners_by_id.insert(&token_id, &balances);
