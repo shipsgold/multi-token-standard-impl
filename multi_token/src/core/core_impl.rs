@@ -1,19 +1,19 @@
 use crate::core::MultiTokenCore;
 use crate::core::MultiTokenMinter;
-use crate::core::MultiTokenResolver;
+use crate::core::resolver::MultiTokenResolver;
 use crate::metadata::{MultiTokenMetadata, MT_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
 use crate::utils::refund_deposit;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap};
-use near_sdk::json_types::{ValidAccountId, U128};
+use near_sdk::json_types::{U128};
 use near_sdk::{
 	assert_one_yocto, env, ext_contract, log, AccountId, Balance, Gas, IntoStorageKey,
 	PromiseOrValue, PromiseResult, StorageUsage,
 };
 
-const GAS_FOR_RESOLVE_TRANSFER: Gas = 5_000_000_000_000;
-const GAS_FOR_FT_TRANSFER_CALL: Gas = 25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER;
+const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(5_000_000_000_000);
+const GAS_FOR_FT_TRANSFER_CALL: Gas = Gas(25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0);
 
 const NO_DEPOSIT: Balance = 0;
 
@@ -79,7 +79,7 @@ pub struct MultiToken {
 impl MultiToken {
 	pub fn new<Q, R, T>(
 		owner_by_id_prefix: Q,
-		owner_id: ValidAccountId,
+		owner_id: AccountId,
 		token_metadata_prefix: Option<R>,
 		supply_by_id_prefix: T,
 	) -> Self
@@ -91,7 +91,7 @@ impl MultiToken {
 		let owner_prefix: Vec<u8> = owner_by_id_prefix.into_storage_key();
 		let token_type_prefix = [owner_prefix.clone(), "t".into()].concat();
 		let mut this = Self {
-			owner_id: owner_id.into(),
+			owner_id,
 			owner_prefix: owner_prefix.clone(),
 			ft_token_storage_usage: 0,
 			ft_account_storage_usage: 0,
@@ -130,7 +130,7 @@ impl MultiToken {
 		self.ft_token_storage_usage = initial_storage_usage - env::storage_usage();
 		let storage_after_token_creation = env::storage_usage();
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
-		let tmp_owner_id = "a".repeat(64);
+		let tmp_owner_id = AccountId::new_unchecked("a".repeat(64));
 		let tmp_supply: u128 = 9999;
 		tmp_balance_lookup.insert(&tmp_owner_id, &tmp_supply);
 		self.ft_owners_by_id.insert(&tmp_token_id, &tmp_balance_lookup);
@@ -146,7 +146,7 @@ impl MultiToken {
 		let initial_storage_usage = env::storage_usage();
 		// 1. set some dummy data
 		let tmp_token_id = "a".repeat(64); // TODO: what's a reasonable max TokenId length?
-		let tmp_owner_id = "a".repeat(64);
+		let tmp_owner_id = AccountId::new_unchecked("a".repeat(64));
 
 		self.nft_owner_by_id.insert(&tmp_token_id, &tmp_owner_id);
 		if let Some(token_metadata_by_id) = &mut self.token_metadata_by_id {
@@ -198,7 +198,7 @@ impl MultiToken {
 		if token_type == TokenType::Ft
 			&& self.ft_owners_by_id.get(&token_id).unwrap().insert(&account_id, &0).is_some()
 		{
-			env::panic_str(b"The account is already registered");
+			env::panic_str("The account is already registered");
 		}
 	}
 
@@ -314,7 +314,7 @@ impl MultiToken {
 			}
 		}
 		self.internal_transfer_unguarded(&token_id, amount, &owner_id, &receiver_id);
-		// TODO this might be problematic if 100 log limit and called from a looping construc
+		// TODO this might be problematic if 100 log limit and called from a looping construct
 		log!("Transfer {} from {} to {}", token_id, sender_id, receiver_id);
 		if let Some(memo) = memo {
 			log!("Memo: {}", memo);
@@ -334,8 +334,8 @@ impl MultiToken {
 		}
 		token_ids.iter().enumerate().for_each(|(idx, token_id)| {
 			self.internal_transfer(
-				&sender_id,
-				&receiver_id.into(),
+				sender_id,
+				receiver_id,
 				&token_id,
 				amounts[idx].into(),
 				memo.clone(),
@@ -374,7 +374,7 @@ impl MultiTokenCore for MultiToken {
 			vec![token_id.clone()],
 			vec![amount],
 			msg,
-			&receiver_id,
+			receiver_id.clone(),
 			NO_DEPOSIT,
 			env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL,
 		)
@@ -383,7 +383,7 @@ impl MultiTokenCore for MultiToken {
 			receiver_id,
 			vec![token_id],
 			vec![amount],
-			&env::current_account_id(),
+			env::current_account_id(),
 			NO_DEPOSIT,
 			GAS_FOR_RESOLVE_TRANSFER,
 		))
@@ -414,29 +414,29 @@ impl MultiTokenCore for MultiToken {
 		let sender_id = env::predecessor_account_id();
 		self.internal_transfer_batch(&sender_id, &receiver_id, &token_ids, &amounts, memo);
 		log!(
-			"Transfering data to:{} from sender: {}, p_gas: {}",
+			"Transferring data to:{} from sender: {}, p_gas: {}",
 			receiver_id,
 			sender_id,
-			env::prepaid_gas()
+			env::prepaid_gas().0
 		);
-		// TODO make this efficient
+		// TODO make this efficient and calculate gas 
 		ext_receiver::mt_on_transfer(
 			sender_id.clone(),
 			token_ids.clone(),
 			amounts.clone(),
 			msg,
-			&receiver_id,
+			receiver_id.clone(),
 			NO_DEPOSIT,
-			25_000_000_000_000,
+			Gas(25_000_000_000_000),
 		)
 		.then(ext_self::mt_resolve_transfer(
 			sender_id,
 			receiver_id,
 			token_ids,
 			amounts,
-			&env::current_account_id(),
+			env::current_account_id(),
 			NO_DEPOSIT,
-			5_000_000_000_000,
+			Gas(5_000_000_000_000),
 			//GAS_FOR_RESOLVE_TRANSFER,
 		))
 		.into()
@@ -535,12 +535,12 @@ impl MultiToken {
 					}
 					TokenType::Nft => {
 						if let Some(current_owner) = self.nft_owner_by_id.get(&token_ids[idx]) {
-							if current_owner != receiver_id {
-								return U128::from(0);
+							return if current_owner != receiver_id {
+								U128::from(0)
 							} else {
 								log!("Return token {} from @{} to @{}", token_ids[idx], &receiver_id, &sender_id);
 								self.internal_transfer_unguarded(&token_ids[idx], 1, &receiver_id, &sender_id);
-								return U128::from(1);
+								U128::from(1)
 							}
 						}
 						U128::from(0)
@@ -557,7 +557,7 @@ impl MultiTokenMinter for MultiToken {
 		token_id: TokenId,
 		token_type: TokenType,
 		amount: Option<U128>,
-		token_owner_id: ValidAccountId,
+		token_owner_id: AccountId,
 		token_metadata: Option<MultiTokenMetadata>,
 	) {
 		let initial_storage_usage = env::storage_usage();
@@ -566,7 +566,7 @@ impl MultiTokenMinter for MultiToken {
 			env::panic_str("Must provide metadata");
 		}
 
-		// Every token must have a token type and every NFT type cannot be reminted
+		// Every token must have a token type and every NFT type cannot be re-minted
 		match self.token_type_index.get(&token_id) {
 			Some(TokenType::Ft) => {
 				assert_eq!(token_type, TokenType::Ft, "Type must be of FT time tokenId already exists")
@@ -579,7 +579,7 @@ impl MultiTokenMinter for MultiToken {
 			}
 		}
 
-		let owner_id: AccountId = token_owner_id.into();
+		let owner_id: AccountId = token_owner_id;
 		// Core behavior: every token must have an owner
 		match token_type {
 			TokenType::Ft => {

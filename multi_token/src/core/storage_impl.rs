@@ -32,7 +32,7 @@ impl MultiToken {
         .transfer(self.internal_storage_balance_bounds(&token_id, None).min.0 + 1);
       Some((account_id, balance))
     } else {
-      env::panic(b"Can't unregister the account with the positive balance without force")
+      env::panic_str("Can't unregister the account with the positive balance without force")
     }
   }
 
@@ -148,7 +148,7 @@ impl StorageManagement for MultiToken {
     let min_balance =
       self.internal_storage_balance_bounds_batch(&token_ids, Some(account_id.clone())).min.0;
     if amount < min_balance {
-      env::panic(b"The attached deposit is less than the minimum storage balance");
+      env::panic_str("The attached deposit is less than the minimum storage balance");
     }
     token_ids.iter().for_each(|token_id| {
       self.internal_register_account(token_id.clone(), &account_id);
@@ -174,12 +174,12 @@ impl StorageManagement for MultiToken {
     {
       match amount {
         Some(amount) if amount.0 > 0 => {
-          env::panic(b"The amount is greater than the available storage balance");
+          env::panic_str("The amount is greater than the available storage balance");
         }
         _ => storage_balance,
       }
     } else {
-      env::panic(format!("The account {} is not registered", &predecessor_account_id).as_bytes());
+      env::panic_str(format!("The account {} is not registered", &predecessor_account_id).as_ref());
     }
   }
 

@@ -1,6 +1,7 @@
 use crate::metadata::MultiTokenMetadata;
 use crate::token::{TokenId, TokenType};
-use near_sdk::json_types::{ValidAccountId, U128};
+use near_sdk::json_types::{U128};
+use near_sdk::AccountId;
 
 /// Used when minting restricted by default to owner. Token owner id is restricted to local accountId.
 pub trait MultiTokenMinter {
@@ -20,7 +21,7 @@ pub trait MultiTokenMinter {
 		token_id: TokenId,
 		token_type: TokenType,
 		amount: Option<U128>,
-		token_owner_id: ValidAccountId,
+		token_owner_id: AccountId,
 		token_metadata: Option<MultiTokenMetadata>,
 	);
 }
