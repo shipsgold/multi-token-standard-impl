@@ -194,7 +194,7 @@ impl MultiToken {
 		let token_type = self
 			.token_type_index
 			.get(&token_id)
-			.unwrap_or_else(|| panic!("token_id {} not found", token_id));
+			.unwrap_or_else(|| env::panic_str(format!("token_id {} not found", token_id).to_str()));
 		if token_type == TokenType::Ft
 			&& self.ft_owners_by_id.get(&token_id).unwrap().insert(&account_id, &0).is_some()
 		{
@@ -281,12 +281,12 @@ impl MultiToken {
 		amount: u128,
 	) {
 		if sender_id == receiver_id {
-			panic!("Sender and receiver cannot be the same")
+			env::panic_str("Sender and receiver cannot be the same")
 		}
 		let token_holders = self.ft_owners_by_id.get(token_id).expect("Could not find token");
 		let balance = token_holders.get(sender_id).expect("Not a token owner");
 		if balance < amount {
-			panic!("Amount exceeds balance");
+			env::panic_str("Amount exceeds balance");
 		}
 	}
 
@@ -330,7 +330,7 @@ impl MultiToken {
 		memo: Option<String>,
 	) {
 		if token_ids.len() != amounts.len() {
-			panic!("Number of token ids and amounts must be equal")
+			env::panic_str("Number of token ids and amounts must be equal")
 		}
 		token_ids.iter().enumerate().for_each(|(idx, token_id)| {
 			self.internal_transfer(
@@ -572,7 +572,7 @@ impl MultiTokenMinter for MultiToken {
 				assert_eq!(token_type, TokenType::Ft, "Type must be of FT time tokenId already exists")
 			}
 			Some(TokenType::Nft) => {
-				panic!("Attempting to mint already minted NFT");
+				env::panic_str("Attempting to mint already minted NFT");
 			}
 			None => {
 				self.token_type_index.insert(&token_id, &token_type);
@@ -595,7 +595,7 @@ impl MultiTokenMinter for MultiToken {
 						let current_bal = balances.get(&owner_id).unwrap_or(0);
 						// TODO not quite safe
 						if amt == 0 {
-							panic!("error: amount should be greater than 0")
+							env::panic_str("error: amount should be greater than 0")
 						}
 						balances.insert(&owner_id, &(current_bal + amt));
 						let supply = self.ft_token_supply_by_id.get(&token_id).unwrap();
