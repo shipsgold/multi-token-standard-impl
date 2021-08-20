@@ -41,7 +41,22 @@ pub fn generate_random_token_tuples(
             Some(MultiTokenMetadata {
                 reference: Some("/some/uri/reference/{id}_token.json".into()),
                 reference_hash: None,
+                title: None,
+                description: None,
+                media: None,
+                media_hash: None,
+                copies: None,
+                issued_at: None,
+                expires_at: None,
+                starts_at: None,
+                updated_at: None,
                 spec: MT_METADATA_SPEC.to_string(),
+                name: "".to_string(),
+                symbol: "".to_string(),
+                icon: None,
+                base_uri: None,
+                decimals: None,
+                extra: None,
             })
         } else {
             None
@@ -55,18 +70,18 @@ pub fn generate_random_token_tuples(
 // Register the given `user` with a set of token_ids
 pub fn register_user(user: &near_sdk_sim::UserAccount, acct_id: AccountId, token_ids: &Vec<TokenId>) {
     user.call(
-        MT_ID.to_string(),
+        AccountId::new_unchecked(MT_ID.to_string()),
         "storage_deposit",
         &json!({
             "token_ids": token_ids,
             "account_id": acct_id 
         })
-        .to_string()
-        .into_bytes(),
+            .to_string()
+            .into_bytes(),
         near_sdk_sim::DEFAULT_GAS / 2,
         near_sdk::env::storage_byte_cost() * 700, // attached deposit
     )
-    .assert_success();
+        .assert_success();
 }
 
 /// Initialize simulator and return:
@@ -74,8 +89,7 @@ pub fn register_user(user: &near_sdk_sim::UserAccount, acct_id: AccountId, token
 /// * nft: the NFT contract, callable with `call!` and `view!`
 /// * alice: a user account, does not yet own any tokens
 /// * token_receiver: a contract implementing `nft_on_transfer` for use with `transfer_and_call`
-pub fn init(
-) -> (UserAccount, ContractAccount<MtContract>, UserAccount, ContractAccount<TokenReceiverContract>)
+pub fn init() -> (UserAccount, ContractAccount<MtContract>, UserAccount, ContractAccount<TokenReceiverContract>)
 {
     let root = init_simulator(None);
     // uses default values for deposit and gas
@@ -90,11 +104,31 @@ pub fn init(
         signer_account: root,
         // init method
         init_method: new(
-            root.valid_account_id()
+            root.account_id()
         )
     );
 
-    let alice = root.create_user("alice".to_string(), to_yocto("100"));
+    let alice = root.create_user(AccountId::new_unchecked("alice".to_string()), to_yocto("100"));
+    let dummy_metadata = MultiTokenMetadata {
+        reference: Some("/some/uri/reference/{id}_token.json".into()),
+        reference_hash: None,
+        title: None,
+        description: None,
+        media: None,
+        media_hash: None,
+        copies: None,
+        issued_at: None,
+        expires_at: None,
+        starts_at: None,
+        updated_at: None,
+        spec: MT_METADATA_SPEC.to_string(),
+        name: "".to_string(),
+        symbol: "".to_string(),
+        icon: None,
+        base_uri: None,
+        decimals: None,
+        extra: None,
+    };
 
     let token_receiver = deploy!(
         contract: TokenReceiverContract,
@@ -105,35 +139,26 @@ pub fn init(
             mt.account_id()
         )
     );
-
     call!(
-        root,
-        mt.mt_mint(
+         root,
+        mt.mint(
             NFT_TOKEN_ID.to_string(),
             TokenType::Nft,
             None,
-            root.valid_account_id(),
-            Some(MultiTokenMetadata {
-                reference: Some("/some/uri/reference/{id}_token.json".into()),
-                reference_hash: None,
-                spec: MT_METADATA_SPEC.to_string()
-            })
+            root.account_id(),
+            Some(dummy_metadata.clone())
         ),
         deposit = 7000000000000000000000
     );
 
     call!(
         root,
-        mt.mt_mint(
+        mt.mint(
             FT_TOKEN_ID.to_string(),
             TokenType::Ft,
             Some(100.into()),
-            root.valid_account_id(),
-            Some(MultiTokenMetadata {
-                reference: Some("/some/uri/reference/ft/{id}_token.json".into()),
-                reference_hash: None,
-                spec: MT_METADATA_SPEC.to_string()
-            })
+            root.account_id(),
+            Some(dummy_metadata)
         ),
         deposit = 7000000000000000000000
     );
@@ -160,5 +185,4 @@ pub fn helper_mint(
     mt: &ContractAccount<MtContract>,
     title: String,
     desc: String,
-) {
-}
+) {}

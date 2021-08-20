@@ -9,9 +9,10 @@ use near_sdk::{
     env, ext_contract, log, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, PromiseOrValue,
 };
 
-const BASE_GAS: u64 = 5_000_000_000_000;
-const PROMISE_CALL: u64 = 5_000_000_000_000;
-const GAS_FOR_MT_ON_TRANSFER: Gas = BASE_GAS + PROMISE_CALL;
+const BASE_GAS: Gas = Gas(5_000_000_000_000);
+const PROMISE_CALL: Gas = Gas(5_000_000_000_000);
+// TODO refactor this gas calculation
+const GAS_FOR_MT_ON_TRANSFER:Gas = Gas(10_000_000_000_000);
 
 const NO_DEPOSIT: Balance = 0;
 
@@ -72,7 +73,7 @@ impl MultiTokenReceiver for TokenReceiver {
                 let account_id = env::current_account_id();
                 ext_self::ok_go(
                     amounts,
-                    &account_id,
+                    account_id,
                     NO_DEPOSIT,
                     prepaid_gas - GAS_FOR_MT_ON_TRANSFER,
                 )
@@ -84,13 +85,13 @@ impl MultiTokenReceiver for TokenReceiver {
                 let account_id = env::current_account_id();
                 ext_self::ok_go(
                     vec![0.into(); amounts.len()],
-                    &account_id,
+                    account_id,
                     NO_DEPOSIT,
                     prepaid_gas - GAS_FOR_MT_ON_TRANSFER,
                 )
                 .into()
             }
-            _ => env::panic(b"unsupported msg"),
+            _ => env::panic_str("unsupported msg"),
         }
     }
 }

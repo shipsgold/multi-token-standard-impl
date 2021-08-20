@@ -16,7 +16,7 @@ impl MultiToken {
     let token_type = self
       .token_type_index
       .get(&token_id)
-      .unwrap_or_else(|| env::panic_str(format!("Could not find token {}", token_id).as_str());
+      .unwrap_or_else(|| env::panic_str(format!("Could not find token {}", token_id).as_str()));
     if token_type == TokenType::Nft {
       return None;
     }
@@ -59,7 +59,7 @@ impl MultiToken {
     let token_type = self
       .token_type_index
       .get(&token_id)
-      .unwrap_or_else(|| env::panic_str(format!("Token id {} not found", token_id).to_str()));
+      .unwrap_or_else(|| env::panic_str(format!("Token id {} not found", token_id).as_str()));
     let no_storage_bound = StorageBalanceBounds { min: 0.into(), max: Some(0.into()) };
 
     if token_type == TokenType::Nft {
@@ -103,7 +103,7 @@ impl MultiToken {
     let token_type = self
       .token_type_index
       .get(&token_id)
-      .unwrap_or_else(|| env::panic_str(format!("Could not find token_id {}", token_id).to_str()));
+      .unwrap_or_else(|| env::panic_str(format!("Could not find token_id {}", token_id).as_str()));
     if token_type == TokenType::Nft {
       return None;
     }
