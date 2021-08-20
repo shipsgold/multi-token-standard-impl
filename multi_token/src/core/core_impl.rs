@@ -1,5 +1,4 @@
 use crate::core::MultiTokenCore;
-use crate::core::MultiTokenMinter;
 use crate::core::resolver::MultiTokenResolver;
 use crate::metadata::{MultiTokenMetadata, MT_METADATA_SPEC};
 use crate::token::{TokenId, TokenType};
@@ -194,7 +193,7 @@ impl MultiToken {
 		let token_type = self
 			.token_type_index
 			.get(&token_id)
-			.unwrap_or_else(|| env::panic_str(format!("token_id {} not found", token_id).to_str()));
+			.unwrap_or_else(|| env::panic_str(format!("token_id {} not found", token_id).as_str()));
 		if token_type == TokenType::Ft
 			&& self.ft_owners_by_id.get(&token_id).unwrap().insert(&account_id, &0).is_some()
 		{
@@ -548,82 +547,6 @@ impl MultiToken {
 				}
 			})
 			.collect()
-	}
-}
-
-impl MultiTokenMinter for MultiToken {
-	fn mint(
-		&mut self,
-		token_id: TokenId,
-		token_type: TokenType,
-		amount: Option<U128>,
-		token_owner_id: AccountId,
-		token_metadata: Option<MultiTokenMetadata>,
-	) {
-		let initial_storage_usage = env::storage_usage();
-		assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
-		if self.token_metadata_by_id.is_some() && token_metadata.is_none() {
-			env::panic_str("Must provide metadata");
-		}
-
-		// Every token must have a token type and every NFT type cannot be re-minted
-		match self.token_type_index.get(&token_id) {
-			Some(TokenType::Ft) => {
-				assert_eq!(token_type, TokenType::Ft, "Type must be of FT time tokenId already exists")
-			}
-			Some(TokenType::Nft) => {
-				env::panic_str("Attempting to mint already minted NFT");
-			}
-			None => {
-				self.token_type_index.insert(&token_id, &token_type);
-			}
-		}
-
-		let owner_id: AccountId = token_owner_id;
-		// Core behavior: every token must have an owner
-		match token_type {
-			TokenType::Ft => {
-				if amount.is_none() {
-					env::panic_str("Amount must be specified for Ft type tokens");
-				}
-				// advance the prefix index before insertion
-				self.inc_balances_prefix();
-				let amt = u128::from(amount.unwrap());
-				//create LookupMap for balances
-				match self.ft_owners_by_id.get(&token_id) {
-					Some(mut balances) => {
-						let current_bal = balances.get(&owner_id).unwrap_or(0);
-						// TODO not quite safe
-						if amt == 0 {
-							env::panic_str("error: amount should be greater than 0")
-						}
-						balances.insert(&owner_id, &(current_bal + amt));
-						let supply = self.ft_token_supply_by_id.get(&token_id).unwrap();
-						self.ft_token_supply_by_id.insert(&token_id, &(supply + amt));
-					}
-					None => {
-						let mut balances: LookupMap<AccountId, Balance> =
-							LookupMap::new(self.get_balances_prefix());
-						// insert amount into balances
-						balances.insert(&owner_id, &amt);
-						self.ft_owners_by_id.insert(&token_id, &balances);
-						self.ft_token_supply_by_id.insert(&token_id, &amt);
-					}
-				}
-			}
-			TokenType::Nft => {
-				self.nft_owner_by_id.insert(&token_id, &owner_id);
-			}
-		}
-		// Metadata extension: Save metadata, keep variable around to return later.
-		// Note that check above already panicked if metadata extension in use but no metadata
-		// provided to call.
-		self
-			.token_metadata_by_id
-			.as_mut()
-			.and_then(|by_id| by_id.insert(&token_id, &token_metadata.as_ref().unwrap()));
-		// Return any extra attached deposit not used for storage
-		refund_deposit(env::storage_usage() - initial_storage_usage);
 	}
 }
 

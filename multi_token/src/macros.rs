@@ -90,31 +90,6 @@ macro_rules! impl_multi_token_core {
     };
 }
 
-#[macro_export]
-macro_rules! impl_multi_token_core_with_minter {
-    ($contract: ident, $token: ident) => {
-        use $crate::core::MultiTokenMinter;
-        use $crate::impl_multi_token_core;
-        use $crate::metadata::MultiTokenMetadata;
-
-        impl_multi_token_core!($contract, $token);
-
-        #[near_bindgen]
-        impl MultiTokenMinter for $contract {
-            fn mint(
-                &mut self,
-                token_id: TokenId,
-                token_type: TokenType,
-                amount: Option<U128>,
-                token_owner_id: ValidAccountId,
-                token_metadata: Option<MultiTokenMetadata>,
-            ) {
-                self.$token.mint(token_id, token_type, amount, token_owner_id, token_metadata)
-            }
-        }
-    };
-}
-
 /// Ensures that when mt token storage grows by collections adding entries,
 /// the storage is be paid by the caller. This ensures that storage cannot grow to a point
 /// that the MT contract runs out of Ⓝ.
