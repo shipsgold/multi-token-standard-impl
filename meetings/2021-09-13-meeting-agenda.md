@@ -1,4 +1,4 @@
-# Multi Token Standard Meeting - Monday 09/10/21 10:00 PM UTC (3:00pm PDT/ 6:00pm EDT)
+# Multi Token Standard Meeting - Monday 09/10/21 11:30 PM UTC (4:30pm PDT/ 7:30pm EDT)
 
 ## Location 
 TBA
