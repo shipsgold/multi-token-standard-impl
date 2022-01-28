@@ -5,8 +5,11 @@
 #[macro_export]
 macro_rules! impl_multi_token_core {
     ($contract: ident, $token: ident) => {
+        use $crate::core::MultiTokenCore;
+        use $crate::core::MultiTokenResolver;
+
         #[near_bindgen]
-        impl $crate::core::MultiTokenCore for $contract {
+        impl MultiTokenCore for $contract {
             #[payable]
             fn mt_transfer(
                 &mut self,
